@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # Auth Service routes
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - RewritePath=/api/auth/(?<path>.*), /$\{path}
+        
+        # User Service routes
+        - id: user-service
+          uri: http://阳明:8082
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - RewritePath=/api/users/(?<path>.*), /$\{path}
+        
+        # Plan Service routes
+        - id: plan-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/plans/**
+          filters:
+            - RewritePath=/api/plans/(?<path>.*), /$\{path}
+        
+        # Video Service routes
+        - id: video-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/videos/**
+          filters:
+            - RewritePath=/api/videos/(?<path>.*), /$\{path}
+  
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+# Server Configuration
+server:
+  port: 8080
+
+# Management Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.oddiya.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
+
