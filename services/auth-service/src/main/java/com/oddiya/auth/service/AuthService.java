@@ -21,12 +21,24 @@ public class AuthService {
     private final UserServiceClient userServiceClient;
 
     public TokenResponse handleOAuthCallback(String provider, String code, String state) {
-        // TODO: Exchange code for user info from OAuth provider
-        // TODO: Create/find user via User Service internal API
+        // Exchange code for access token
+        String accessToken = oAuthService.exchangeCodeForToken(code, provider);
         
-        // Mock implementation for now
-        Long userId = 1L; // This should come from User Service
-        String email = "user@example.com"; // This should come from OAuth provider
+        // Get user info from OAuth provider
+        OAuthService.GoogleUserInfo userInfo = oAuthService.getUserInfoFromGoogle(accessToken);
+        
+        // Create or find user via User Service internal API
+        UserServiceClient.UserResponse userResponse = userServiceClient.createOrFindUser(
+            new UserServiceClient.CreateUserRequest(
+                userInfo.getEmail(),
+                userInfo.getName(),
+                provider,
+                userInfo.getId()
+            )
+        );
+        
+        Long userId = userResponse.getId();
+        String email = userResponse.getEmail();
         
         // Generate tokens
         String accessToken = jwtService.generateToken(userId, email);
