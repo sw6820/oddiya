@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 17.0 for all microservices
+  postgres:
+    image: postgres:17.0
+    container_name: oddiya-postgres
+    environment:
+      POSTGRES_USER: oddiya_user
+      POSTGRES_PASSWORD: oddiya_password_dev
+      POSTGRES_DB: oddiya
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oddiya_user -d oddiya"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oddiya-network
+
+  # Redis 7.4 for caching and refresh tokens
+  redis:
+    image: redis:7.4-alpine
+    container_name: oddiya-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - oddiya-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  oddiya-network:
+    driver: bridge
+
