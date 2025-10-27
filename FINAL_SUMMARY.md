@@ -3,7 +3,7 @@
 ## 🎉 Completed Phases
 
 ### Phase 0: Git Repository Setup ✅
-**Commits:** b665109 → aa69e80
+**Commits:** b665109 → 7bd916e
 
 - Git repository initialized on `main` branch
 - Comprehensive `.gitignore` for Java, Python, Docker, K8s
@@ -72,10 +72,13 @@
 
 ## 📊 Statistics
 
-- **Total Commits:** 27
-- **Total Files:** 60+
+- **Total Commits:** 35
+- **Total Files:** 75+
+- **GitHub:** https://github.com/sw6820/oddiya
 - **Working Tree:** Clean ✅
 - **Test Coverage:** All major services have unit tests
+- **CI/CD:** GitHub Actions configured ✅
+- **IaC:** Terraform infrastructure ready ✅
 
 ## 🎯 Remaining Phases
 
