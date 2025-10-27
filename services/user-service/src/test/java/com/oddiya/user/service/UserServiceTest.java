@@ -2,7 +2,7 @@ package com.oddiya.user.service;
 
 import com.oddiya.user.dto.UpdateUserRequest;
 import com.oddiya.user.entity.User;
-import com.oddi出面a.user.repository.UserRepository;
+import com.oddiya.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
