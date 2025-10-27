@@ -90,3 +90,17 @@ secrets/
 # Node modules (if any future frontend)
 node_modules/
 
+# Additional logs
+logs
+dev-debug.log
+
+# Task management (if using)
+tasks.json
+tasks/
+
+# Dependency directories
+# Environment variables (already covered above)
+
+# Editor directories and files (already covered above)
+
+# OS specific (already covered above) 
