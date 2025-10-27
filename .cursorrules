@@ -1,0 +1,340 @@
+# Oddiya Project - System Prompt
+
+## Critical Rules
+1. **ALWAYS EDIT EXISTING FILES** - Never create new files unless absolutely necessary or explicitly requested
+2. **READ BEFORE WRITE** - Always use Read tool to check existing files before making changes
+3. **PREFER UPDATES** - When adding features, update existing files rather than creating new ones
+4. **NO DUPLICATE FILES** - Check for existing implementations before creating new files
+
+## Project Overview
+- **Name:** Oddiya (v1.3 - Hybrid Self-Hosted)
+- **Mission:** AI-powered mobile travel planner with automated short-form video generation
+- **Timeline:** 8-Week MVP Development
+- **Document:** See `TechSpecPRD.md` for full specification
+
+## Development Priorities (In Order)
+1. **P1: Core Flow** - OAuth Login → AI-Powered Travel Planning
+2. **P2: K8s Operations** - Deploying stateless microservices on EKS
+3. **P3: Video Generation** - Asynchronous video processing pipeline
+
+## Core Technology Stack
+
+### Backend Services
+- **Java Services:** Spring Boot 3.2, Java 21, Spring Cloud Gateway, Spring Security
+- **Python Services:** FastAPI (LLM Agent), Python 3.11 (Video Worker)
+
+### Infrastructure
+- **Orchestration:** AWS EKS (Kubernetes 1.28)
+- **Compute:** 1x EC2 t3.medium (Spot Instance) for K8s workloads
+- **Database:** PostgreSQL 17.0 on dedicated t2.micro EC2 (⚠️ 1GB RAM bottleneck)
+- **Cache:** Redis 7.4 on dedicated t2.micro EC2
+- **Storage:** AWS S3
+- **Messaging:** AWS SQS (Standard Queue + DLQ)
+- **AI:** AWS Bedrock (Claude Sonnet)
+- **Notifications:** AWS SNS
+
+### External APIs
+- Kakao Local API (Priority 1)
+- OpenWeatherMap (Priority 2)
+- ExchangeRate-API (Priority 2)
+
+## Architecture: 7 Microservices
+
+### 1. API Gateway (Spring Cloud Gateway)
+- Single entry point for mobile traffic
+- Routes requests, rate limiting
+- Validates RS256 JWTs using public key from Auth Service's `/jwks.json`
+- Port: 8080
+
+### 2. Auth Service (Spring Boot)
+- OAuth 2.0 (Google, Apple)
+- Generates RS256 Access Tokens (1hr) and Refresh Tokens (14 days)
+- Stores refresh tokens in t2.micro Redis
+- Provides `/.well-known/jwks.json` endpoint
+- Port: 8081
+
+### 3. User Service (Spring Boot)
+- User profile CRUD: `GET /users/me`, `PATCH /users/me`
+- Internal API: `POST /internal/users` (called by Auth Service only)
+- Connects to t2.micro PostgreSQL
+- Port: 8082
+
+### 4. Plan Service (Spring Boot)
+- Travel plan CRUD operations
+- Calls LLM Agent via synchronous REST for AI recommendations
+- Connects to t2.micro PostgreSQL
+- Port: 8083
+
+### 5. LLM Agent (FastAPI)
+- Orchestrates AI plan generation
+- Calls Kakao Local, OpenWeatherMap APIs
+- Uses Bedrock Function Calling with Claude Sonnet
+- Caches responses in t2.micro Redis (1hr TTL)
+- Port: 8000
+
+### 6. Video Service (Spring Boot)
+- Video job lifecycle management
+- Idempotency via `Idempotency-Key` header
+- Publishes jobs to AWS SQS
+- Returns `202 Accepted` with job_id
+- Connects to t2.micro PostgreSQL
+- Port: 8084
+
+### 7. Video Worker (Python)
+- Long-polls SQS queue
+- Downloads photos from S3
+- Generates video using FFmpeg (start with 1 template)
+- Uploads MP4 to S3
+- Triggers AWS SNS push notifications
+- Connects to t2.micro PostgreSQL
+
+## Database Schema (PostgreSQL 17.0)
+
+### Schema-per-Service Model
+```sql
+-- user_service.users
+CREATE TABLE user_service.users (
+    id BIGSERIAL PRIMARY KEY,
+    email VARCHAR NOT NULL,
+    name VARCHAR NOT NULL,
+    provider VARCHAR NOT NULL,
+    provider_id VARCHAR NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- plan_service.travel_plans
+CREATE TABLE plan_service.travel_plans (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- plan_service.plan_details
+CREATE TABLE plan_service.plan_details (
+    id BIGSERIAL PRIMARY KEY,
+    plan_id BIGINT NOT NULL,
+    day INT NOT NULL,
+    location VARCHAR NOT NULL,
+    activity TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- video_service.video_jobs
+CREATE TABLE video_service.video_jobs (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    status VARCHAR NOT NULL, -- PENDING, PROCESSING, COMPLETED, FAILED
+    photo_urls TEXT[],
+    template VARCHAR,
+    video_url VARCHAR,
+    idempotency_key UUID UNIQUE NOT NULL, -- Client-provided
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## Key Implementation Patterns
+
+### Authentication Flow (RS256 JWT)
+1. Mobile app initiates OAuth (`GET /oauth2/authorize/{provider}`)
+2. Auth Service redirects to provider (Google/Apple)
+3. Mobile app receives authorization code
+4. Mobile app sends code to `POST /oauth2/callback/{provider}`
+5. Auth Service exchanges code, creates/fetches user (calls User Service internal API)
+6. Auth Service generates RS256 Access Token (1hr) and Refresh Token (14 days)
+7. Refresh token stored in Redis: `refresh_token:{uuid}` → `{user_id}`
+8. API Gateway validates all requests by fetching JWKS from Auth Service
+
+### Video Generation Flow (Asynchronous)
+1. Mobile app generates client-side UUID for `Idempotency-Key`
+2. Mobile app uploads photos to S3 (pre-signed URLs)
+3. Mobile app calls `POST /api/v1/videos` with header `Idempotency-Key: {uuid}`
+4. Video Service saves job to DB (status: PENDING) with idempotency_key
+5. Video Service publishes to SQS, returns `202 Accepted`
+6. Video Worker polls SQS, checks DB status (idempotency check)
+7. Worker processes (FFmpeg), uploads to S3, updates DB (status: COMPLETED)
+8. Worker publishes to SNS → Push notification to mobile
+9. Mobile app fetches `GET /api/v1/videos/{jobId}` for video_url (no polling)
+
+## Project Structure Convention
+
+```
+oddiya/
+├── infrastructure/           # K8s manifests, Terraform
+│   ├── kubernetes/
+│   │   ├── deployments/
+│   │   ├── services/
+│   │   └── ingress/
+│   └── terraform/
+├── services/
+│   ├── api-gateway/         # Spring Cloud Gateway
+│   ├── auth-service/        # Spring Boot
+│   ├── user-service/        # Spring Boot
+│   ├── plan-service/        # Spring Boot
+│   ├── llm-agent/           # FastAPI
+│   ├── video-service/       # Spring Boot
+│   └── video-worker/        # Python
+├── mobile/                  # React Native (future)
+├── scripts/                 # DevOps scripts
+├── docs/                    # API specs, diagrams
+└── TechSpecPRD.md          # Source of truth
+
+Each service should follow:
+services/{service-name}/
+├── src/
+├── tests/
+├── Dockerfile
+├── build.gradle or requirements.txt
+└── README.md
+```
+
+## Coding Guidelines
+
+### For Spring Boot Services
+- Use Spring Boot 3.2, Java 21
+- Package structure: `com.oddiya.{service}.{layer}`
+- Layers: controller, service, repository, dto, entity, config
+- Use `application.yml` for configuration (not .properties)
+- Database connection: Use environment variables for t2.micro EC2 private IPs
+- Error handling: Use `@ControllerAdvice` for global exception handling
+- Validation: Use Jakarta Bean Validation (`@Valid`)
+- Logging: Use SLF4J with Logback
+
+### For Python Services
+- Use Python 3.11+
+- FastAPI for LLM Agent
+- Pydantic for data validation
+- Black for code formatting
+- Use environment variables via python-dotenv
+- Async/await for I/O operations
+
+### Kubernetes Manifests
+- Use Deployments (not StatefulSets) for all services
+- Resource limits: Start conservative (CPU: 200m-500m, Memory: 256Mi-512Mi)
+- Health checks: liveness and readiness probes for all services
+- ConfigMaps for configuration, Secrets for credentials
+- Service discovery: Use K8s Service names (e.g., `http://auth-service:8081`)
+
+## Performance Considerations
+
+### ⚠️ Known Bottleneck
+- PostgreSQL on t2.micro (1GB RAM) will be extremely slow
+- This is an accepted trade-off for learning/cost reasons
+- Load tests will expose this bottleneck
+
+### Optimization Strategies
+- Redis caching for LLM Agent responses (1hr TTL)
+- Connection pooling for database connections (keep pool size low)
+- Horizontal Pod Autoscaler (HPA) for stateless services
+- SQS for async processing (avoid blocking operations)
+
+## Development Workflow
+
+### Week 1-2: Infrastructure & Auth (P1/P2)
+- Focus: EKS setup, t2.micro EC2s, Auth + User Services
+- Goal: OAuth 2.0 working end-to-end
+
+### Week 3-5: AI Planning (P1)
+- Focus: LLM Agent + Bedrock, Plan Service
+- Priority 1: Kakao Local API
+- Priority 2: Weather & Exchange APIs (if time permits)
+
+### Week 6-7: Video Pipeline (P3)
+- Focus: Video Service + Worker, SQS/SNS
+- Priority 1: One FFmpeg template
+- Priority 2: Additional templates (if time permits)
+
+### Week 8: Operations & Testing (P2)
+- Focus: Load testing, HPA, documentation
+- Expect to document t2.micro bottleneck
+
+## Common Commands
+
+```bash
+# Build Java service
+./gradlew clean build
+
+# Build Python service
+pip install -r requirements.txt
+
+# Docker build
+docker build -t oddiya/{service-name}:latest .
+
+# Deploy to K8s
+kubectl apply -f infrastructure/kubernetes/{service-name}/
+
+# Check pod status
+kubectl get pods -n oddiya
+
+# View logs
+kubectl logs -f deployment/{service-name} -n oddiya
+
+# Port forward for local testing
+kubectl port-forward svc/{service-name} 8080:8080 -n oddiya
+```
+
+## Environment Variables Pattern
+
+### Common Variables
+```
+# Database (t2.micro PostgreSQL)
+DB_HOST=10.0.x.x  # Private IP
+DB_PORT=5432
+DB_NAME=oddiya
+DB_USER=oddiya_user
+DB_PASSWORD=***
+
+# Redis (t2.micro)
+REDIS_HOST=10.0.x.x  # Private IP
+REDIS_PORT=6379
+
+# AWS
+AWS_REGION=ap-northeast-2
+S3_BUCKET=oddiya-storage
+SQS_QUEUE_URL=https://sqs.{region}.amazonaws.com/{account}/oddiya-video-jobs
+SNS_TOPIC_ARN=arn:aws:sns:{region}:{account}:oddiya-notifications
+
+# Bedrock
+BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+```
+
+## Testing Strategy
+
+### Unit Tests
+- Spring Boot: JUnit 5, Mockito
+- FastAPI: pytest, pytest-asyncio
+
+### Integration Tests
+- Testcontainers for PostgreSQL/Redis
+- Mock external APIs (Kakao, Bedrock)
+
+### Load Tests
+- Locust for HTTP load testing
+- Test scenarios: Auth flow, Plan generation, Video submission
+
+## Important Notes
+
+1. **Security Groups:** Ensure EKS nodes can reach t2.micro EC2s on ports 5432 and 6379
+2. **Idempotency:** Video Service MUST use client-provided UUID, Worker MUST check DB before processing
+3. **JWT Validation:** API Gateway fetches JWKS from Auth Service, caches public key in Redis
+4. **No Client Polling:** Use SNS push notifications instead of polling for video status
+5. **Spot Instances:** t3.medium is Spot, plan for potential interruptions (use node affinity)
+
+## When Starting New Chat
+1. Read this file first to understand project context
+2. Check `TechSpecPRD.md` for detailed specifications
+3. Review existing service implementations before creating new ones
+4. Always prefer updating existing files over creating new ones
+5. Follow the established package structure and naming conventions
+
+## Questions to Ask Before Implementation
+- Does this file already exist?
+- Can I update an existing service instead of creating a new one?
+- Does this follow the microservice architecture outlined above?
+- Is this aligned with the current week's priorities?
+- Have I considered the t2.micro resource constraints?
