@@ -192,8 +192,8 @@ All services require:
 DB_HOST=10.0.x.x
 DB_PORT=5432
 DB_NAME=oddiya
-DB_USER=oddiya_user
-DB_PASSWORD=***
+DB_USER=admin
+DB_PASSWORD=4321
 
 # Redis (t2.micro private IP)
 REDIS_HOST=10.0.x.x
@@ -275,5 +275,17 @@ locust -f locustfile.py --host=http://api.oddiya.com
 
 ## References
 
-- **TechSpecPRD.md** - Complete technical specification with architecture diagrams
-- **.cursorrules** - Detailed coding guidelines and patterns
+- **[Architecture Overview](docs/architecture/overview.md)** - Complete technical specification with architecture diagrams
+- **[Development Plan](docs/development/plan.md)** - Detailed phased development strategy
+- **[Testing Guide](docs/development/testing.md)** - Testing standards and practices
+- **[.cursorrules](.cursorrules)** - Detailed coding guidelines and patterns
+
+## Documentation Structure
+
+All documentation is organized in the `docs/` directory:
+
+- `docs/architecture/` - System design and architecture
+- `docs/development/` - Development guides and plans
+- `docs/deployment/` - CI/CD and infrastructure deployment
+- `docs/api/` - API integrations and external services
+- `docs/archive/` - Historical progress tracking documents

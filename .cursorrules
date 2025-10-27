@@ -165,7 +165,8 @@ CREATE TABLE video_service.video_jobs (
 
 ```
 oddiya/
-├── infrastructure/           # K8s manifests, Terraform
+├── .github/workflows/       # GitHub Actions CI/CD
+├── infrastructure/          # K8s manifests, Terraform
 │   ├── kubernetes/
 │   │   ├── deployments/
 │   │   ├── services/
@@ -179,10 +180,14 @@ oddiya/
 │   ├── llm-agent/           # FastAPI
 │   ├── video-service/       # Spring Boot
 │   └── video-worker/        # Python
+├── docs/                    # All documentation
+│   ├── architecture/        # System design
+│   ├── development/         # Dev guides
+│   ├── deployment/          # CI/CD, infrastructure
+│   ├── api/                 # API docs
+│   └── archive/             # Historical docs
 ├── mobile/                  # React Native (future)
-├── scripts/                 # DevOps scripts
-├── docs/                    # API specs, diagrams
-└── TechSpecPRD.md          # Source of truth
+└── scripts/                 # DevOps scripts
 
 Each service should follow:
 services/{service-name}/

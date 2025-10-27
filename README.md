@@ -29,13 +29,21 @@ This is an 8-week MVP project building 7 microservices on AWS EKS with resource-
 
 ### Getting Started
 
-See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for detailed Chain of Thought planning and ultrathink strategy.
+See [Getting Started Guide](docs/development/getting-started.md) for local development setup.
 
-### Key Documents
+### Documentation
 
-- **[TechSpecPRD.md](TechSpecPRD.md)** - Complete technical specification
-- **[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)** - Phased development plan with CoT reasoning
-- **[CLAUDE.md](CLAUDE.md)** - Claude Code assistant guidelines
+- **[Architecture Overview](docs/architecture/overview.md)** - System architecture and design
+- **[Development Plan](docs/development/plan.md)** - Phased development with CoT strategy
+- **[Getting Started](docs/development/getting-started.md)** - Local development setup
+- **[Testing Guide](docs/development/testing.md)** - Testing standards
+- **[CI/CD Setup](docs/deployment/ci-cd.md)** - GitHub Actions workflow
+- **[Infrastructure](docs/deployment/infrastructure.md)** - Terraform and AWS setup
+- **[External APIs](docs/api/external-apis.md)** - API integrations
+
+**For AI Assistants:**
+- [CLAUDE.md](CLAUDE.md) - Claude Code guidelines
+- [.cursorrules](.cursorrules) - Cursor IDE rules
 
 ### Git Strategy
 
@@ -43,13 +51,10 @@ See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for detailed Chain of Thought pla
 - Each commit is atomic and testable
 - Branch strategy: `main` (stable) → `develop` (integration)
 
-### Current Commit History
+### Repository
 
-```
-1d9cde4 docs: add development plan with CoT ultrathink strategy
-a772754 chore: add .gitignore for Java, Python, Docker, Kubernetes
-b665109 docs: initial project documentation (TechSpecPRD.md, CLAUDE.md)
-```
+- **GitHub:** https://github.com/sw6820/oddiya
+- **Commits:** See full history at https://github.com/sw6820/oddiya/commits/main
 
 ### Completed ✅
 
@@ -63,11 +68,11 @@ b665109 docs: initial project documentation (TechSpecPRD.md, CLAUDE.md)
 
 ### Next Steps
 
-1. Phase 5: Complete Plan Service with LLM integration
-2. Phase 6: Build Video Services (Video Service + Worker)
-3. Phase 7: Testing, documentation, and deployment
+1. **Phase 5:** Complete Plan Service with LLM integration
+2. **Phase 6:** Build Video Services (Video Service + Worker)
+3. **Phase 7:** Testing, documentation, and deployment
 
-See [FINAL_SUMMARY.md](FINAL_SUMMARY.md) for complete status.
+See [docs/README.md](docs/README.md) for full documentation index.
 
 ---
 
