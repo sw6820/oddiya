@@ -1,0 +1,38 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: video-service
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:oddiya}
+    username: ${DB_USER:oddiya_user}
+    password: ${DB_PASSWORD:oddiya_password_dev}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    properties:
+      hibernate:
+        default_schema: video_service
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  sqs:
+    queue-url: ${SQS_QUEUE_URL:}
+  s3:
+    bucket: ${S3_BUCKET:oddiya-storage}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.oddiya.video: DEBUG
+
