@@ -10,7 +10,7 @@ spring:
           predicates:
             - Path=/api/auth/**
           filters:
-            - RewritePath=/api/auth/(?<path>.*), /api/v1/auth/$\{path}
+            - RewritePath=/api/auth(?<segment>/?.*), /api/v1/auth$\{segment}
         
         # User Service routes
         - id: user-service
@@ -18,23 +18,23 @@ spring:
           predicates:
             - Path=/api/users/**
           filters:
-            - RewritePath=/api/users/(?<path>.*), /api/v1/users/$\{path}
+            - RewritePath=/api/users(?<segment>/?.*), /api/v1/users$\{segment}
         
         # Plan Service routes
         - id: plan-service
           uri: http://plan-service:8083
           predicates:
-            - Path=/api/plans/**
+            - Path=/api/plans,/api/plans/**
           filters:
-            - RewritePath=/api/plans/(?<path>.*), /api/v1/plans/$\{path}
+            - RewritePath=/api/plans(?<segment>/?.*), /api/v1/plans$\{segment}
         
         # Video Service routes
         - id: video-service
           uri: http://video-service:8084
           predicates:
-            - Path=/api/videos/**
+            - Path=/api/videos,/api/videos/**
           filters:
-            - RewritePath=/api/videos/(?<path>.*), /api/v1/videos/$\{path}
+            - RewritePath=/api/videos(?<segment>/?.*), /api/v1/videos$\{segment}
   
   data:
     redis:
