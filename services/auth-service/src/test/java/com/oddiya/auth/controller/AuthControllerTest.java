@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = AuthController.class)
 class AuthControllerTest {
 
-    @环境的
+    @Autowired
     private MockMvc mockMvc;
 
     @MockBean

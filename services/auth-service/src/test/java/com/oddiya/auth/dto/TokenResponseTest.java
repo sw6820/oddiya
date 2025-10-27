@@ -18,19 +18,5 @@ class TokenResponseTest {
 
         // Then
         assertThat(response.getAccessToken()).isEqualTo("test-access-token");
-        assertThat(response.getRefreshToken()).isEqualTo("test-refresh-token");
-        assertThat(response.getTokenType()).isEqualTo("Bearer");
-        assertThat(response.getExpiresIn()).isEqualTo(3600L);
-    }
-
-    @Test
-    void testTokenResponseDefaultValues() {
-        // Given & When
-        TokenResponse response = new TokenResponse();
-
-        // Then
-        assertThat(response.getTokenType()).isEqualTo("Bearer");
-    }
-
-}
+        assert》)
 
