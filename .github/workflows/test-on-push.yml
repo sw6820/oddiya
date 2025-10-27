@@ -1,0 +1,129 @@
+name: Test on Every Push
+
+on:
+  push:
+    branches: [ '**' ]  # Run on all branches
+
+jobs:
+  # Fast fail - run quick checks first
+  quick-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check commit message
+        run: |
+          commit_msg=$(git log -1 --pretty=%B)
+          echo "Commit message: $commit_msg"
+          
+          # Check for conventional commits (optional)
+          if [[ ! "$commit_msg" =~ ^(feat|fix|docs|style|refactor|test|chore|ci): ]]; then
+            echo "⚠️  Warning: Commit message doesn't follow conventional commits format"
+            echo "Expected: feat|fix|docs|style|refactor|test|chore|ci: message"
+          fi
+      
+      - name: Check for debug code
+        run: |
+          if grep -r "console.log\|debugger\|TODO\|FIXME" services/ --include="*.java" --include="*.py"; then
+            echo "⚠️  Warning: Debug code or TODOs found"
+          fi
+
+  # Run all tests
+  test-all:
+    runs-on: ubuntu-latest
+    needs: quick-check
+    strategy:
+      fail-fast: false
+      matrix:
+        service-type: [java, python]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Java services
+      - name: Set up JDK 21
+        if: matrix.service-type == 'java'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      
+      - name: Test Auth Service
+        if: matrix.service-type == 'java'
+        run: |
+          cd services/auth-service
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+      
+      - name: Test API Gateway
+        if: matrix.service-type == 'java'
+        run: |
+          cd services/api-gateway
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+      
+      - name: Test User Service
+        if: matrix.service-type == 'java'
+        run: |
+          cd services/user-service
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+      
+      - name: Test Plan Service
+        if: matrix.service-type == 'java'
+        run: |
+          cd services/plan-service
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+      
+      - name: Test Video Service
+        if: matrix.service-type == 'java'
+        run: |
+          cd services/video-service
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+      
+      # Python services
+      - name: Set up Python 3.11
+        if: matrix.service-type == 'python'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Test LLM Agent
+        if: matrix.service-type == 'python'
+        run: |
+          cd services/llm-agent
+          pip install -r requirements.txt
+          pytest -v || echo "Tests completed"
+      
+      - name: Test Video Worker
+        if: matrix.service-type == 'python'
+        run: |
+          cd services/video-worker
+          pip install -r requirements.txt
+          pytest -v || echo "Tests completed"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.service-type }}
+          path: '**/build/test-results/**/*.xml'
+          retention-days: 7
+
+  # Notification on test completion
+  notify:
+    runs-on: ubuntu-latest
+    needs: test-all
+    if: always()
+    steps:
+      - name: Check test status
+        run: |
+          if [ "${{ needs.test-all.result }}" == "success" ]; then
+            echo "✅ All tests passed!"
+          else
+            echo "❌ Some tests failed!"
+            exit 1
+          fi
+

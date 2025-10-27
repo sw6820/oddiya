@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature/** ]
   pull_request:
     branches: [ main, develop ]
 
@@ -93,11 +93,11 @@ jobs:
           ./gradlew check
         if: always()
 
-  # Build Docker Images (on main branch)
+  # Build Docker Images (on main branch only)
   build-docker:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    needs: [test-java-services, test-python-services]
+    needs: [test-java-services, test-python-services, lint]
     
     steps:
       - uses: actions/checkout@v4

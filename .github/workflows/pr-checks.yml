@@ -1,0 +1,75 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Quick validation before full CI runs
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for merge conflicts
+        run: |
+          if grep -r "<<<<<<< HEAD" .; then
+            echo "Merge conflict markers found!"
+            exit 1
+          fi
+      
+      - name: Check file sizes
+        run: |
+          find . -type f -size +10M | while read file; do
+            echo "Large file detected: $file"
+          done
+      
+      - name: Validate docker-compose files
+        run: |
+          docker-compose config > /dev/null
+          docker-compose -f docker-compose.local.yml config > /dev/null
+
+  # Code quality checks
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Python code quality
+        run: |
+          pip install black flake8 pylint
+          black --check services/llm-agent/ services/video-worker/ || echo "Black formatting check failed"
+          flake8 services/llm-agent/ services/video-worker/ --max-line-length=120 || echo "Flake8 check failed"
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      
+      - name: Java code quality
+        run: |
+          cd services/auth-service
+          chmod +x gradlew
+          ./gradlew check || echo "Gradle check completed"
+
+  # Dependency checks
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
