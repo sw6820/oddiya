@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: auth-service
+  
+  # OAuth2 Configuration
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
+            scope:
+              - email
+              - profile
+            redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:3000/oauth/callback/google}
+            authorization-grant-type: authorization_code
+            provider: google
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+            user-name-attribute: id
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+# JWT Configuration
+jwt:
+  access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:3600}  # 1 hour
+  refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:1209600}  # 14 days
+
+# Application Configuration
+app:
+  user-service:
+    url: ${USER_SERVICE_URL:http://localhost:8082}
+  
+  oauth:
+    providers:
+      - google
+      # apple: (to be added)
+
+# Server Configuration
+server:
+  port: 8081
+
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.oddiya: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+
