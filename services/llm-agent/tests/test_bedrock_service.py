@@ -51,9 +51,7 @@ class TestBedrockService:
         )
         
         assert plan is not None
-        assert as
-
-        "daily_plans" in plan
+        assert "daily_plans" in plan
         assert isinstance(plan["daily_plans"], list)
     
     def test_build_prompt(self):
