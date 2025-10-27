@@ -20,32 +20,13 @@ public class PlanService {
 
     @Transactional
     public Mono<PlanResponse> createPlan(Long userId, CreatePlanRequest request) {
-        // Create plan without LLM for now (LLM integration can be added later)
-        TravelPlan plan = new TravelPlan();
-        plan.setUserId(userId);
-        plan.setTitle(request.getTitle());
-        plan.setStartDate(request.getStartDate());
-        plan.setEndDate(request.getEndDate());
-        
-        // Add simple default details
-        PlanDetail detail1 = new PlanDetail();
-        detail1.setPlan(plan);
-        detail1.setDay(1);
-        detail1.setLocation("City Center");
-        detail1.setActivity("Explore and enjoy!");
-        
-        plan.setDetails(List.of(detail1));
-        
-        TravelPlan savedPlan = planRepository.save(plan);
-        return Mono.just(PlanResponse.fromEntity(savedPlan));
-        
-        // TODO: Integrate with LLM Agent for AI-generated plans
-        // Uncomment below when LLM Agent is fully working:
-        /*
+        // Create LLM request with enhanced data
         LlmRequest llmRequest = new LlmRequest();
         llmRequest.setTitle(request.getTitle());
-        llmRequest.setStartDate(request.getStartDate());
-        llmRequest.setEndDate(request.getEndDate());
+        llmRequest.setStartDate(request.getStartDate().toString());
+        llmRequest.setEndDate(request.getEndDate().toString());
+        llmRequest.setBudget("medium");  // Default budget
+        llmRequest.setLocation(extractLocation(request.getTitle()));  // Extract from title
 
         return llmAgentClient.generatePlan(llmRequest)
                 .map(llmResponse -> {
@@ -71,8 +52,33 @@ public class PlanService {
 
                     TravelPlan savedPlan = planRepository.save(plan);
                     return PlanResponse.fromEntity(savedPlan);
+                })
+                .onErrorResume(error -> {
+                    // Fallback: create simple plan if LLM fails
+                    TravelPlan plan = new TravelPlan();
+                    plan.setUserId(userId);
+                    plan.setTitle(request.getTitle());
+                    plan.setStartDate(request.getStartDate());
+                    plan.setEndDate(request.getEndDate());
+                    
+                    PlanDetail detail = new PlanDetail();
+                    detail.setPlan(plan);
+                    detail.setDay(1);
+                    detail.setLocation("City Center");
+                    detail.setActivity("Explore and enjoy!");
+                    plan.setDetails(List.of(detail));
+                    
+                    TravelPlan savedPlan = planRepository.save(plan);
+                    return Mono.just(PlanResponse.fromEntity(savedPlan));
                 });
-        */
+    }
+    
+    private String extractLocation(String title) {
+        // Extract city name from title (simple logic)
+        if (title.contains("서울") || title.toLowerCase().contains("seoul")) return "Seoul";
+        if (title.contains("부산") || title.toLowerCase().contains("busan")) return "Busan";
+        if (title.contains("제주") || title.toLowerCase().contains("jeju")) return "Jeju";
+        return "Seoul";  // Default
     }
 
     public List<PlanResponse> getUserPlans(Long userId) {

@@ -4,7 +4,7 @@ LLM Agent Service - FastAPI application for AI-powered travel planning
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.routes import plan_router
+from src.routes.enhanced_plans import router as enhanced_plan_router
 from src.config import settings
 
 app = FastAPI(
@@ -22,8 +22,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include happy route
-app.include_router(plan_router, prefix="/api/v1", tags=["plans"])
+# Include enhanced plan routes
+app.include_router(enhanced_plan_router, prefix="/api/v1", tags=["plans"])
 
 
 @app.get("/health")
