@@ -20,7 +20,28 @@ public class PlanService {
 
     @Transactional
     public Mono<PlanResponse> createPlan(Long userId, CreatePlanRequest request) {
-        // Call LLM Agent
+        // Create plan without LLM for now (LLM integration can be added later)
+        TravelPlan plan = new TravelPlan();
+        plan.setUserId(userId);
+        plan.setTitle(request.getTitle());
+        plan.setStartDate(request.getStartDate());
+        plan.setEndDate(request.getEndDate());
+        
+        // Add simple default details
+        PlanDetail detail1 = new PlanDetail();
+        detail1.setPlan(plan);
+        detail1.setDay(1);
+        detail1.setLocation("City Center");
+        detail1.setActivity("Explore and enjoy!");
+        
+        plan.setDetails(List.of(detail1));
+        
+        TravelPlan savedPlan = planRepository.save(plan);
+        return Mono.just(PlanResponse.fromEntity(savedPlan));
+        
+        // TODO: Integrate with LLM Agent for AI-generated plans
+        // Uncomment below when LLM Agent is fully working:
+        /*
         LlmRequest llmRequest = new LlmRequest();
         llmRequest.setTitle(request.getTitle());
         llmRequest.setStartDate(request.getStartDate());
@@ -51,6 +72,7 @@ public class PlanService {
                     TravelPlan savedPlan = planRepository.save(plan);
                     return PlanResponse.fromEntity(savedPlan);
                 });
+        */
     }
 
     public List<PlanResponse> getUserPlans(Long userId) {
