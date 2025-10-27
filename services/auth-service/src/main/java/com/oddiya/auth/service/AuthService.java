@@ -2,6 +2,7 @@ package com.oddiya.auth.service;
 
 import com.oddiya.auth.config.JwtConfig;
 import com.oddiya.auth.dto.TokenResponse;
+import com.oddiya.auth.exception.InvalidTokenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final JwtConfig jwtConfig;
     private final RedisTemplate<String, String> redisTemplate;
+    private final OAuthService oAuthService;
+    private final UserServiceClient userServiceClient;
 
     public TokenResponse handleOAuthCallback(String provider, String code, String state) {
         // TODO: Exchange code for user info from OAuth provider
