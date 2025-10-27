@@ -48,7 +48,7 @@ public class AuthService {
         storeRefreshToken(refreshToken, userId);
         
         return TokenResponse.builder()
-                .accessToken(accessToken)
+                .accessToken(jwtAccessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(jwtConfig.getAccessTokenValidity())
