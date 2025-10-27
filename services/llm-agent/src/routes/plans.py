@@ -25,7 +25,7 @@ class PlanResponse(BaseModel):
     summary: str
 
 
-@router.post("/generate-plan", response_model=PlanResponse)
+@router.post("/plans/generate", response_model=PlanResponse)
 async def generate_plan(request: PlanRequest):
     """
     Generate AI-powered travel plan
