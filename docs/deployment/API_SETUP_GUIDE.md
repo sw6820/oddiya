@@ -7,9 +7,11 @@ How to enable real Bedrock, Kakao, and OpenWeatherMap APIs for AI-generated trav
 **현재 상태:** Mock mode (테스트 데이터 사용)  
 **변경할 상태:** Real APIs (실제 AI 및 데이터 사용)
 
-## Required API Keys
+## Required API Keys (Only 2!)
 
 ### 1. AWS Bedrock (Claude Sonnet)
+
+**Why:** Claude has built-in knowledge of Korea's tourist destinations, no external place API needed!
 
 **Get Access:**
 ```bash
@@ -76,7 +78,7 @@ OPENWEATHER_API_KEY=your-openweather-api-key
 
 **Documentation:** https://openweathermap.org/api
 
-### 4. LangSmith (Optional - Monitoring)
+### 3. LangSmith (Optional - Monitoring)
 
 **Get API Key:**
 ```bash
@@ -426,9 +428,6 @@ docker-compose -f docker-compose.local.yml restart llm-agent
 - Per plan: ~2,000 tokens = $0.006
 - 100 plans: $0.60
 
-**Kakao Local API:**
-- FREE (월 300,000 calls)
-
 **OpenWeatherMap:**
 - FREE (월 1,000,000 calls)
 
@@ -457,7 +456,6 @@ AWS_REGION=ap-northeast-2
 BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 
 # External APIs (REAL)
-KAKAO_LOCAL_API_KEY=abc123def456ghi789jkl
 OPENWEATHER_API_KEY=1234567890abcdef1234567890abcdef
 
 # LangSmith (REAL - Optional)

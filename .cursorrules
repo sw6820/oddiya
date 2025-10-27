@@ -35,9 +35,8 @@
 - **Notifications:** AWS SNS
 
 ### External APIs
-- Kakao Local API (Priority 1)
-- OpenWeatherMap (Priority 2)
-- ExchangeRate-API (Priority 2)
+- **NONE** - Using LLM-only strategy for MVP
+- AWS Bedrock (Claude Sonnet) provides sufficient Korea travel knowledge
 
 ## Architecture: 7 Microservices
 
@@ -67,11 +66,12 @@
 - Port: 8083
 
 ### 5. LLM Agent (FastAPI)
-- Orchestrates AI plan generation
-- Calls Kakao Local, OpenWeatherMap APIs
-- Uses Bedrock Function Calling with Claude Sonnet
-- Caches responses in t2.micro Redis (1hr TTL)
+- **LLM-Only Strategy**: Direct AWS Bedrock Claude Sonnet invocation
+- No external API calls - uses Claude's built-in Korea travel knowledge
+- Smart prompt engineering with user preferences (dates, budget, interests)
+- Caches responses in t2.micro Redis (1hr TTL) for cost optimization
 - Port: 8000
+- **Advantages**: Faster response, lower cost, no external API dependencies
 
 ### 6. Video Service (Spring Boot)
 - Video job lifecycle management
@@ -246,9 +246,10 @@ services/{service-name}/
 - Goal: OAuth 2.0 working end-to-end
 
 ### Week 3-5: AI Planning (P1)
-- Focus: LLM Agent + Bedrock, Plan Service
-- Priority 1: Kakao Local API
-- Priority 2: Weather & Exchange APIs (if time permits)
+- Focus: LLM Agent + Bedrock (LLM-only strategy), Plan Service
+- Smart prompt engineering for Korea travel planning
+- Redis caching optimization (target 90%+ cache hit rate)
+- No external API integration needed - faster development
 
 ### Week 6-7: Video Pipeline (P3)
 - Focus: Video Service + Worker, SQS/SNS
@@ -305,8 +306,10 @@ S3_BUCKET=oddiya-storage
 SQS_QUEUE_URL=https://sqs.{region}.amazonaws.com/{account}/oddiya-video-jobs
 SNS_TOPIC_ARN=arn:aws:sns:{region}:{account}:oddiya-notifications
 
-# Bedrock
-BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+# Bedrock (LLM Agent only) - Claude Sonnet 4.5
+BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-5-20250929-v1:0
+BEDROCK_REGION=us-east-1
+# No external APIs - LLM-only strategy for MVP
 ```
 
 ## Testing Strategy
@@ -325,11 +328,13 @@ BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 
 ## Important Notes
 
-1. **Security Groups:** Ensure EKS nodes can reach t2.micro EC2s on ports 5432 and 6379
-2. **Idempotency:** Video Service MUST use client-provided UUID, Worker MUST check DB before processing
-3. **JWT Validation:** API Gateway fetches JWKS from Auth Service, caches public key in Redis
-4. **No Client Polling:** Use SNS push notifications instead of polling for video status
-5. **Spot Instances:** t3.medium is Spot, plan for potential interruptions (use node affinity)
+1. **LLM-Only Strategy:** NO external APIs (no Kakao, no weather, no exchange rate) - AWS Bedrock Claude Sonnet 4.5 only
+2. **Security Groups:** Ensure EKS nodes can reach t2.micro EC2s on ports 5432 and 6379
+3. **Idempotency:** Video Service MUST use client-provided UUID, Worker MUST check DB before processing
+4. **JWT Validation:** API Gateway fetches JWKS from Auth Service, caches public key in Redis
+5. **No Client Polling:** Use SNS push notifications instead of polling for video status
+6. **Spot Instances:** t3.medium is Spot, plan for potential interruptions (use node affinity)
+7. **Cost Optimization:** Redis caching with 1hr TTL for LLM responses (target 90%+ cache hit rate)
 
 ## When Starting New Chat
 1. Read this file first to understand project context

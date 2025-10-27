@@ -126,8 +126,7 @@ services:
       AWS_REGION: ${AWS_REGION:-ap-northeast-2}
       BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-anthropic.claude-3-sonnet-20240229-v1:0}
       
-      # External APIs
-      KAKAO_LOCAL_API_KEY: ${KAKAO_LOCAL_API_KEY:-test-key}
+      # External APIs (OpenWeatherMap only)
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-test-key}
       
       # LangSmith (Optional)

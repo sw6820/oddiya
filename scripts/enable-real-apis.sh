@@ -43,11 +43,6 @@ if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
     ((MISSING++))
 fi
 
-if [ -z "$KAKAO_LOCAL_API_KEY" ]; then
-    print_error "KAKAO_LOCAL_API_KEY not set"
-    ((MISSING++))
-fi
-
 if [ -z "$OPENWEATHER_API_KEY" ]; then
     print_error "OPENWEATHER_API_KEY not set"
     ((MISSING++))
@@ -60,7 +55,6 @@ if [ $MISSING -gt 0 ]; then
     echo "Set them first:"
     echo "  export AWS_ACCESS_KEY_ID=your-key"
     echo "  export AWS_SECRET_ACCESS_KEY=your-secret"
-    echo "  export KAKAO_LOCAL_API_KEY=your-key"
     echo "  export OPENWEATHER_API_KEY=your-key"
     echo ""
     echo "Then run this script again"
@@ -83,8 +77,7 @@ AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 AWS_REGION=ap-northeast-2
 BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 
-# External APIs (REAL)
-KAKAO_LOCAL_API_KEY=$KAKAO_LOCAL_API_KEY
+# External APIs (REAL - OpenWeather only)
 OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY
 
 # LangSmith (Optional)
@@ -131,9 +124,8 @@ echo "✅ REAL APIS ENABLED!"
 echo "════════════════════════════════════════"
 echo ""
 echo "Now when you create a plan, it will use:"
-echo "  🤖 AWS Bedrock (Claude Sonnet)"
-echo "  🌤️ OpenWeatherMap (Real weather)"
-echo "  📍 Kakao Local API (Real places)"
+echo "  🤖 AWS Bedrock (Claude Sonnet - has Korea knowledge)"
+echo "  🌤️ OpenWeatherMap (Real weather forecast)"
 echo ""
 echo "Test at: http://172.16.102.149:8080/app"
 echo ""

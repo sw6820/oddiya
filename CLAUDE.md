@@ -42,10 +42,12 @@ Cache: Redis 7.4 for refresh tokens + LLM cache
 - Video Worker polls SQS → checks DB status → processes (FFmpeg) → uploads to S3 → SNS push
 - NO client polling - use push notifications
 
-**AI Planning:**
+**AI Planning (LLM-Only Strategy):**
 - Plan Service → LLM Agent (sync REST)
-- LLM Agent → Bedrock Function Calling + Kakao Local API
-- Responses cached in Redis (1hr TTL)
+- LLM Agent → **AWS Bedrock Claude Sonnet ONLY** (no external APIs)
+- Smart prompt engineering with user preferences (destination, dates, budget, interests)
+- Comprehensive Korea travel knowledge built into Claude Sonnet
+- Responses cached in Redis (1hr TTL) for 90%+ cost savings
 
 ### Resource Constraints
 
@@ -207,8 +209,9 @@ S3_BUCKET=oddiya-storage
 SQS_QUEUE_URL=https://sqs.ap-northeast-2.amazonaws.com/{account}/oddiya-video-jobs
 SNS_TOPIC_ARN=arn:aws:sns:ap-northeast-2:{account}:oddiya-notifications
 
-# Bedrock (LLM Agent only)
-BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+# Bedrock (LLM Agent only) - Claude Sonnet 4.5
+BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-5-20250929-v1:0
+BEDROCK_REGION=us-east-1
 
 # OAuth (Auth Service only)
 GOOGLE_CLIENT_ID=***

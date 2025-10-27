@@ -14,7 +14,6 @@ from langgraph.graph import StateGraph, END
 from langsmith import Client, traceable
 
 from src.services.weather_service import WeatherService
-from src.services.kakao_service import KakaoService
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +70,6 @@ class LangGraphPlanner:
             self.llm = None  # Use mock responses
         
         self.weather_service = WeatherService()
-        self.kakao_service = KakaoService()
         
         # Build the planning graph
         self.graph = self._build_planning_graph()
@@ -127,22 +125,9 @@ class LangGraphPlanner:
             start_date=state["start_date"]
         )
         
-        # Get real places from Kakao
-        places = await self.kakao_service.search_places(
-            query=f"{state['location']} tourist",
-            category="AT4"
-        )
-        
-        restaurants = await self.kakao_service.search_places(
-            query=f"{state['location']} restaurant",
-            category="FD6"
-        )
-        
+        # Use weather data only (no Kakao API)
         state["weather_data"] = weather
-        state["places_data"] = {
-            "attractions": places[:5],
-            "restaurants": restaurants[:5]
-        }
+        state["places_data"] = {}  # Claude has built-in Korea knowledge
         state["messages"] = [
             SystemMessage(content="You are an expert travel planner creating detailed itineraries.")
         ]
@@ -316,12 +301,9 @@ WEATHER FORECAST:
 - Rain Probability: {weather.get('precipitation_probability', 0)}%
 - Recommendation: {weather.get('recommendation', 'Check weather')}
 
-REAL PLACES TO USE (from Kakao Local API):
-Tourist Attractions:
-{attractions_list}
-
-Restaurants:
-{restaurants_list}
+LOCATION CONTEXT:
+You have extensive knowledge of Korea's tourist destinations, restaurants, and attractions.
+Use your knowledge to recommend specific, real places in {state['location']}.
 
 BUDGET GUIDELINES:
 - Low Budget (₩50,000/day): Public transport, budget meals, free attractions
