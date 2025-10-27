@@ -344,7 +344,7 @@ public class WebAppController {
                     `;
                 } else {
                     container.innerHTML = plans.map(plan => `
-                        <div class="card">
+                        <div class="card" onclick="showPlanDetails(${plan.id})" style="cursor: pointer;">
                             <div class="card-title">${plan.title}</div>
                             <div class="card-subtitle">
                                 ${new Date(plan.startDate).toLocaleDateString()} - 
@@ -352,11 +352,101 @@ public class WebAppController {
                             </div>
                             ${plan.details && plan.details.length > 0 ? 
                                 `<div class="card-meta">📍 ${plan.details.length} activities</div>` : ''}
+                            <div style="margin-top: 12px; color: #667eea; font-size: 14px; font-weight: 600;">
+                                👆 Tap to see AI recommendations
+                            </div>
                         </div>
                     `).join('');
                 }
             } catch (error) {
                 container.innerHTML = '<div class="error-message">Failed to load plans</div>';
+            }
+        }
+        
+        // Show Plan Details
+        async function showPlanDetails(planId) {
+            const container = document.getElementById('plans-list');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading details...</p></div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/plans/${planId}`, {
+                    headers: { 'X-User-Id': USER_ID }
+                });
+                const plan = await response.json();
+                
+                let detailsHTML = '';
+                if (plan.details && plan.details.length > 0) {
+                    detailsHTML = plan.details.map(detail => `
+                        <div class="card">
+                            <div class="card-title">📅 Day ${detail.day}: ${detail.location}</div>
+                            <div class="card-subtitle">${detail.activity}</div>
+                            ${detail.details ? `
+                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0;">
+                                    ${detail.details.morning ? `
+                                        <div style="margin-bottom: 8px;">
+                                            <strong>🌅 Morning (${detail.details.morning.time})</strong><br/>
+                                            📍 ${detail.details.morning.location}<br/>
+                                            💰 ₩${detail.details.morning.cost ? detail.details.morning.cost.toLocaleString() : 'Free'}
+                                        </div>
+                                    ` : ''}
+                                    ${detail.details.afternoon ? `
+                                        <div style="margin-bottom: 8px;">
+                                            <strong>☀️ Afternoon (${detail.details.afternoon.time})</strong><br/>
+                                            📍 ${detail.details.afternoon.location}<br/>
+                                            💰 ₩${detail.details.afternoon.cost ? detail.details.afternoon.cost.toLocaleString() : 'Free'}
+                                        </div>
+                                    ` : ''}
+                                    ${detail.details.evening ? `
+                                        <div>
+                                            <strong>🌙 Evening (${detail.details.evening.time})</strong><br/>
+                                            ${detail.details.evening.activity}<br/>
+                                            💰 ₩${detail.details.evening.cost ? detail.details.evening.cost.toLocaleString() : 'Free'}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                            ${detail.weatherTip ? `
+                                <div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 8px;">
+                                    ${detail.weatherTip}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                }
+                
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-title">${plan.title}</div>
+                        <div class="card-subtitle">
+                            ${new Date(plan.startDate).toLocaleDateString()} - 
+                            ${new Date(plan.endDate).toLocaleDateString()}
+                        </div>
+                        ${plan.totalEstimatedCost ? `
+                            <div class="card-meta">
+                                💰 Total Budget: ₩${plan.totalEstimatedCost.toLocaleString()}
+                            </div>
+                        ` : ''}
+                        ${plan.weatherSummary ? `
+                            <div class="card-meta">
+                                🌤️ Weather: ${plan.weatherSummary}
+                            </div>
+                        ` : ''}
+                        <button class="button button-secondary" onclick="loadPlans()">← Back to List</button>
+                    </div>
+                    
+                    <h3 style="margin: 20px 0 12px 0;">Daily Itinerary</h3>
+                    ${detailsHTML}
+                    
+                    ${plan.tips && plan.tips.length > 0 ? `
+                        <div class="card">
+                            <div class="card-title">💡 Travel Tips</div>
+                            ${plan.tips.map(tip => `<div style="margin: 8px 0;">• ${tip}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                `;
+            } catch (error) {
+                container.innerHTML = '<div class="error-message">Failed to load plan details</div>';
+                setTimeout(loadPlans, 2000);
             }
         }
         
