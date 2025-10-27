@@ -41,7 +41,7 @@ public class AuthService {
         String email = userResponse.getEmail();
         
         // Generate tokens
-        String accessToken = jwtService.generateToken(userId, email);
+        String jwtAccessToken = jwtService.generateToken(userId, email);
         String refreshToken = UUID.randomUUID().toString();
         
         // Store refresh token in Redis

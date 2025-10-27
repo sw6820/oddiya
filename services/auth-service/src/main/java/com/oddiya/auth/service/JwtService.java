@@ -69,11 +69,11 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         KeyPair keyPair = jwtConfig.getKeyPair();
-        return Jwts.parserBuilder()
-                .setSigningKey(keyPair.getPublic())
+        return Jwts.parser()
+                .verifyWith(keyPair.getPublic())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private Boolean isTokenExpired(String token) {
