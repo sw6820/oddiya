@@ -8,6 +8,8 @@ AI-powered mobile travel planner with automated short-form video generation. 8-w
 
 **Critical Rule:** ALWAYS edit existing files instead of creating new ones. Read files first before making changes.
 
+**Documentation:** All docs are now in `docs/` directory with organized structure. See `docs/README.md` for index.
+
 ## Architecture Overview
 
 ### Microservices (7 Total)

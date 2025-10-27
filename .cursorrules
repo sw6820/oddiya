@@ -10,7 +10,8 @@
 - **Name:** Oddiya (v1.3 - Hybrid Self-Hosted)
 - **Mission:** AI-powered mobile travel planner with automated short-form video generation
 - **Timeline:** 8-Week MVP Development
-- **Document:** See `TechSpecPRD.md` for full specification
+- **Documentation:** See `docs/` directory for all documentation
+- **Architecture:** See `docs/architecture/overview.md` for full specification
 
 ## Development Priorities (In Order)
 1. **P1: Core Flow** - OAuth Login → AI-Powered Travel Planning
