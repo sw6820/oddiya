@@ -53,7 +53,7 @@ git push -u origin main
 ```
 oddiya/
 ├── services/
-│   ├── api-g张嘴way/      ✅ Complete
+│   ├── api-gateway/      ✅ Complete
 │   ├── auth-service/     ✅ Complete
 │   ├── llm-agent/        ✅ Complete
 │   ├── plan-service/     ⏳ In Progress
