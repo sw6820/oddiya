@@ -120,12 +120,26 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # AWS Bedrock
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-anthropic.claude-3-sonnet-20240229-v1:0}
+      
+      # External APIs
+      KAKAO_LOCAL_API_KEY: ${KAKAO_LOCAL_API_KEY:-test-key}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-test-key}
+      
+      # LangSmith (Optional)
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-oddiya-dev}
+      
+      # Mode (set to false for real APIs)
+      MOCK_MODE: ${MOCK_MODE:-true}
+      
+      # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      AWS_REGION: ap-northeast-2
-      BEDROCK_MODEL_ID: anthropic.claude-3-sonnet-20240229-v1:0
-      KAKAO_LOCAL_API_KEY: ${KAKAO_LOCAL_API_KEY:-test-key}
-      MOCK_MODE: "true"
     depends_on:
       redis:
         condition: service_healthy
