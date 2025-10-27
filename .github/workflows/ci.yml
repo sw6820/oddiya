@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [auth-service, api-gateway, plan-service]
+        service: [auth-service, api-gateway, plan-service, user-service, video-service]
     
     steps:
       - uses: actions/checkout@v4
@@ -125,10 +125,38 @@ jobs:
           push: true
           tags: sw6820/oddiya-api-gateway:latest,sw6820/oddiya-api-gateway:${{ github.sha }}
       
+      - name: Build and push Plan Service
+        uses: docker/build-push-action@v5
+        with:
+          context: services/plan-service/
+          push: true
+          tags: sw6820/oddiya-plan-service:latest,sw6820/oddiya-plan-service:${{ github.sha }}
+      
+      - name: Build and push User Service
+        uses: docker/build-push-action@v5
+        with:
+          context: services/user-service/
+          push: true
+          tags: sw6820/oddiya-user-service:latest,sw6820/oddiya-user-service:${{ github.sha }}
+      
+      - name: Build and push Video Service
+        uses: docker/build-push-action@v5
+        with:
+          context: services/video-service/
+          push: true
+          tags: sw6820/oddiya-video-service:latest,sw6820/oddiya-video-service:${{ github.sha }}
+      
       - name: Build and push LLM Agent
         uses: docker/build-push-action@v5
         with:
           context: services/llm-agent/
           push: true
           tags: sw6820/oddiya-llm-agent:latest,sw6820/oddiya-llm-agent:${{ github.sha }}
+      
+      - name: Build and push Video Worker
+        uses: docker/build-push-action@v5
+        with:
+          context: services/video-worker/
+          push: true
+          tags: sw6820/oddiya-video-worker:latest,sw6820/oddiya-video-worker:${{ github.sha }}
 
