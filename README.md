@@ -1,80 +1,112 @@
-# Oddiya Project
+# Oddiya
 
 **AI-Powered Mobile Travel Planner with Automated Video Generation**
 
-## Quick Start
+8-week MVP building 7 microservices on AWS EKS with resource-constrained infrastructure.
 
-This is an 8-week MVP project building 7 microservices on AWS EKS with resource-constrained infrastructure.
+## 🚀 Quick Start
 
-### Current Status
+```bash
+# 1. Clone and setup
+git clone https://github.com/sw6820/oddiya.git
+cd oddiya
+cp env.example .env.local
 
-✅ **Phase 0-4 Complete:** Git, Infrastructure, Auth, Gateway, LLM Agent with tests  
-✅ **CI/CD Ready:** GitHub Actions configured  
-✅ **IaC Ready:** Terraform infrastructure setup  
-📋 **Next:** Phase 5-7 - Complete remaining services and deploy
+# 2. Start all services
+./scripts/start-for-mobile-testing.sh
 
-### Project Architecture
+# 3. Test APIs
+./scripts/test-mobile-api.sh
 
-- **7 Microservices:** API Gateway + Auth/User/Plan/Video Services + LLM Agent + Video Worker
-- **Hybrid Infrastructure:** Stateless on EKS (t3.medium), Stateful on EC2s (2x t2.micro)
-- **CI/CD:** GitHub Actions for automated testing and Docker builds
-- **IaC:** Terraform for AWS infrastructure provisioning
-- **Local-First Development:** Docker Compose → Terraform Deploy → Kubernetes
+# 4. Access API Gateway
+curl http://localhost:8080/actuator/health
+```
 
-### Development Priorities
+**[Full Setup Guide →](docs/development/getting-started.md)**
 
-1. **P1: Core Flow** - OAuth Login → AI-Powered Travel Planning (Week 1-5)
-2. **P2: K8s Operations** - EKS deployment + operations (Week 1-2, 8)
-3. **P3: Video Generation** - Async video processing pipeline (Week 6-7)
+## Current Status
 
-### Getting Started
+**MVP Complete:** All 7 services implemented ✅
 
-See [Getting Started Guide](docs/development/getting-started.md) for local development setup.
+- ✅ **Auth Service** - OAuth 2.0, RS256 JWT, refresh tokens
+- ✅ **API Gateway** - Spring Cloud Gateway with JWT validation
+- ✅ **User Service** - Profile management, internal API
+- ✅ **Plan Service** - Travel plans CRUD + LLM integration
+- ✅ **LLM Agent** - Bedrock integration, Kakao API, Redis caching
+- ✅ **Video Service** - SQS producer, idempotency handling
+- ✅ **Video Worker** - FFmpeg pipeline, S3 integration, SNS notifications
+- ✅ **Infrastructure** - Docker Compose, Dockerfiles, CI/CD, Terraform VPC
 
-### Documentation
+## Architecture
 
-- **[Architecture Overview](docs/architecture/overview.md)** - System architecture and design
-- **[Development Plan](docs/development/plan.md)** - Phased development with CoT strategy
-- **[Getting Started](docs/development/getting-started.md)** - Local development setup
-- **[Testing Guide](docs/development/testing.md)** - Testing standards
-- **[CI/CD Setup](docs/deployment/ci-cd.md)** - GitHub Actions workflow
-- **[Infrastructure](docs/deployment/infrastructure.md)** - Terraform and AWS setup
-- **[External APIs](docs/api/external-apis.md)** - API integrations
+7 microservices on AWS EKS + stateful components on EC2:
 
-**For AI Assistants:**
-- [CLAUDE.md](CLAUDE.md) - Claude Code guidelines
-- [.cursorrules](.cursorrules) - Cursor IDE rules
+| Service | Tech | Port | Purpose |
+|---------|------|------|---------|
+| **API Gateway** | Spring Cloud Gateway | 8080 | Routing, JWT validation |
+| **Auth Service** | Spring Boot | 8081 | OAuth 2.0, RS256 JWT |
+| **User Service** | Spring Boot | 8082 | User profiles |
+| **Plan Service** | Spring Boot | 8083 | Travel plans + AI |
+| **LLM Agent** | FastAPI | 8000 | Bedrock, Kakao API |
+| **Video Service** | Spring Boot | 8084 | Video jobs, SQS |
+| **Video Worker** | Python | - | FFmpeg, S3, SNS |
 
-### Git Strategy
+**Infrastructure:** EKS + 2x t2.micro EC2 (PostgreSQL, Redis) + S3/SQS/SNS
+
+**[Full Architecture →](docs/architecture/overview.md)**
+
+## Core Features
+
+✅ **OAuth Authentication** - Google (Apple ready)  
+✅ **AI Travel Planning** - AWS Bedrock + Kakao Local API  
+✅ **Video Generation** - Automated short-form videos with FFmpeg  
+✅ **Microservices** - 7 independently deployable services  
+✅ **Cloud-Ready** - Docker + Kubernetes + Terraform  
+✅ **CI/CD** - Automatic testing on every push
+
+## 📚 Documentation
+
+**[Complete Documentation Index](docs/README.md)**
+
+### Quick Links
+- **[Quick Start](docs/development/getting-started.md)** - Set up in 5 minutes
+- **[Quick Reference](docs/development/QUICK_REFERENCE.md)** - Common commands
+- **[Configuration](docs/development/CONFIGURATION_MANAGEMENT.md)** - Environment setup
+- **[Mobile Testing](docs/api/MOBILE_API_TESTING.md)** - Connect your mobile app
+- **[Architecture](docs/architecture/overview.md)** - System design
+
+## Deployment Ready
+
+**MVP Complete:** All core services implemented and tested
+
+### What's Working
+- 7 microservices with unit tests
+- Docker containers for all services
+- CI/CD pipeline (GitHub Actions)
+- Local development environment
+- Database schemas and migrations
+
+### Next Steps (Production)
+1. Deploy to AWS EKS
+2. Configure production secrets
+3. Set up monitoring (Prometheus/Grafana)
+4. Load testing with Locust
+5. Production documentation
+
+## Git Strategy
 
 - Commit by feature/module for easy rollback
 - Each commit is atomic and testable
 - Branch strategy: `main` (stable) → `develop` (integration)
 
-### Repository
+## Repository
 
 - **GitHub:** https://github.com/sw6820/oddiya
-- **Commits:** See full history at https://github.com/sw6820/oddiya/commits/main
-
-### Completed ✅
-
-- **Phase 0:** Git repository and development plan
-- **Phase 1:** Local infrastructure (Docker Compose)
-- **Phase 2:** Auth Service (OAuth + JWT + tests)
-- **Phase 3:** API Gateway (routing configured)
-- **Phase 4:** LLM Agent (FastAPI + Bedrock + tests)
-- **CI/CD:** GitHub Actions pipeline
-- **IaC:** Terraform for AWS
-
-### Next Steps
-
-1. **Phase 5:** Complete Plan Service with LLM integration
-2. **Phase 6:** Build Video Services (Video Service + Worker)
-3. **Phase 7:** Testing, documentation, and deployment
-
-See [docs/README.md](docs/README.md) for full documentation index.
+- **Actions:** https://github.com/sw6820/oddiya/actions
+- **Commits:** 56+ commits, 150+ files
 
 ---
 
-**Important:** This project uses a t2.micro PostgreSQL (1GB RAM) which will be the **primary performance bottleneck**. This is an accepted trade-off for learning/cost reasons.
+**For AI Assistants:** See [CLAUDE.md](CLAUDE.md) or [.cursorrules](.cursorrules)
 
+**Important:** This project uses t2.micro PostgreSQL (1GB RAM) which will be the **primary performance bottleneck**. This is an accepted trade-off for learning/cost reasons.
