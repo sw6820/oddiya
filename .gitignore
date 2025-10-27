@@ -104,3 +104,7 @@ tasks/
 # Editor directories and files (already covered above)
 
 # OS specific (already covered above) 
+test-results/*.csv
+test-results/*.html
+test-results/load/
+!test-results/.gitkeep
