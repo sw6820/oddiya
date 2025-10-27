@@ -57,6 +57,9 @@
 ### Phase 4: LLM Agent ✅
 **Commits:** 8c73c92 → 19d83b8
 
+### Infrastructure Automation ✅
+**Commits:** 77d91a3
+
 - FastAPI application structure
 - AWS Bedrock integration (with mock mode)
 - Redis caching service
@@ -106,6 +109,8 @@
 - Docker Compose (local dev) ✅
 - PostgreSQL (schema-per-service) ✅
 - Redis (caching + tokens) ✅
+- GitHub Actions (CI/CD) ✅
+- Terraform (IaC) ✅
 
 ### Languages & Frameworks
 - **Java 21** with Spring Boot 3.2 ✅
