@@ -54,19 +54,18 @@ public class PlanService {
                     return PlanResponse.fromEntity(savedPlan);
                 })
                 .onErrorResume(error -> {
-                    // Fallback: create simple plan if LLM fails
+                    // Fallback: create realistic plan if LLM fails
+                    String location = extractLocation(request.getTitle());
+                    
                     TravelPlan plan = new TravelPlan();
                     plan.setUserId(userId);
                     plan.setTitle(request.getTitle());
                     plan.setStartDate(request.getStartDate());
                     plan.setEndDate(request.getEndDate());
                     
-                    PlanDetail detail = new PlanDetail();
-                    detail.setPlan(plan);
-                    detail.setDay(1);
-                    detail.setLocation("City Center");
-                    detail.setActivity("Explore and enjoy!");
-                    plan.setDetails(List.of(detail));
+                    // Generate better default activities based on location
+                    List<PlanDetail> details = generateDefaultActivities(location, plan);
+                    plan.setDetails(details);
                     
                     TravelPlan savedPlan = planRepository.save(plan);
                     return Mono.just(PlanResponse.fromEntity(savedPlan));
@@ -79,6 +78,79 @@ public class PlanService {
         if (title.contains("부산") || title.toLowerCase().contains("busan")) return "Busan";
         if (title.contains("제주") || title.toLowerCase().contains("jeju")) return "Jeju";
         return "Seoul";  // Default
+    }
+    
+    private List<PlanDetail> generateDefaultActivities(String location, TravelPlan plan) {
+        // Generate realistic default activities by location
+        java.time.LocalDate start = plan.getStartDate();
+        java.time.LocalDate end = plan.getEndDate();
+        int numDays = (int) java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
+        
+        List<PlanDetail> details = new java.util.ArrayList<>();
+        
+        for (int day = 1; day <= numDays; day++) {
+            PlanDetail detail = new PlanDetail();
+            detail.setPlan(plan);
+            detail.setDay(day);
+            
+            if (location.equals("Seoul")) {
+                switch (day) {
+                    case 1:
+                        detail.setLocation("Gyeongbokgung Palace & Bukchon");
+                        detail.setActivity("Morning: Royal palace tour (₩3,000), Afternoon: Traditional Hanok village walk (Free), Evening: Insadong traditional street (₩30,000 dinner)");
+                        break;
+                    case 2:
+                        detail.setLocation("Myeongdong & N Seoul Tower");
+                        detail.setActivity("Morning: Shopping at Myeongdong (₩50,000), Afternoon: Cable car to N Seoul Tower (₩14,000), Evening: Han River picnic (₩20,000)");
+                        break;
+                    case 3:
+                        detail.setLocation("Gangnam & COEX");
+                        detail.setActivity("Morning: Gangnam shopping (₩40,000), Afternoon: COEX Aquarium (₩27,000), Evening: K-Star Road (₩25,000)");
+                        break;
+                    default:
+                        detail.setLocation("Seoul City Exploration");
+                        detail.setActivity("Explore local markets, try street food, and enjoy the city atmosphere");
+                        break;
+                }
+            } else if (location.equals("Busan")) {
+                switch (day) {
+                    case 1:
+                        detail.setLocation("Haeundae Beach & Dongbaek Island");
+                        detail.setActivity("Morning: Beach walk (Free), Afternoon: Dongbaek Island trail (Free), Evening: Seafood dinner at Jagalchi Market (₩40,000)");
+                        break;
+                    case 2:
+                        detail.setLocation("Gamcheon Culture Village");
+                        detail.setActivity("Morning: Colorful village tour (Free), Afternoon: Songdo Beach cable car (₩15,000), Evening: Gwangalli Beach (₩30,000)");
+                        break;
+                    default:
+                        detail.setLocation("Busan Coastal Tour");
+                        detail.setActivity("Explore beaches and seafood markets");
+                        break;
+                }
+            } else if (location.equals("Jeju")) {
+                switch (day) {
+                    case 1:
+                        detail.setLocation("Seongsan Ilchulbong & Seopjikoji");
+                        detail.setActivity("Morning: Sunrise peak hike (₩5,000), Afternoon: Seopjikoji coast walk (Free), Evening: Black pork BBQ (₩35,000)");
+                        break;
+                    case 2:
+                        detail.setLocation("Hallasan & Folk Village");
+                        detail.setActivity("Morning: National park trail (₩5,000), Afternoon: Folk village (₩11,000), Evening: Local seafood (₩40,000)");
+                        break;
+                    default:
+                        detail.setLocation("Jeju Nature Exploration");
+                        detail.setActivity("Explore natural beauty and local culture");
+                        break;
+                }
+            } else {
+                detail.setLocation(location + " Highlights");
+                detail.setActivity("Explore major attractions, try local cuisine, and enjoy the culture");
+            }
+            
+            details.add(detail);
+        }
+        
+        return details;
     }
 
     public List<PlanResponse> getUserPlans(Long userId) {
