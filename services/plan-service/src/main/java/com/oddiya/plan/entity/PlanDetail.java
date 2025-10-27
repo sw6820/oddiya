@@ -1,7 +1,7 @@
 package com.oddiya.plan.entity;
 
 import jakarta.persistence.*;
-import מלז את כל השדות import lombok.AllArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
