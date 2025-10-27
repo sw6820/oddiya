@@ -1,0 +1,193 @@
+version: '3.8'
+
+services:
+  # Infrastructure
+  postgres:
+    image: postgres:17.0-alpine
+    container_name: oddiya-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: oddiya
+      POSTGRES_USER: oddiya_user
+      POSTGRES_PASSWORD: oddiya_password_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oddiya_user -d oddiya"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oddiya-network
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: oddiya-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oddiya-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: oddiya-auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: oddiya
+      DB_USER: oddiya_user
+      DB_PASSWORD: oddiya_password_dev
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-test-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-test-secret}
+      USER_SERVICE_URL: http://user-service:8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - oddiya-network
+    restart: unless-stopped
+
+  # User Service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: oddiya-user-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: oddiya
+      DB_USER: oddiya_user
+      DB_PASSWORD: oddiya_password_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - oddiya-network
+    restart: unless-stopped
+
+  # Plan Service
+  plan-service:
+    build:
+      context: ./services/plan-service
+      dockerfile: Dockerfile
+    container_name: oddiya-plan-service
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: oddiya
+      DB_USER: oddiya_user
+      DB_PASSWORD: oddiya_password_dev
+      LLM_AGENT_URL: http://llm-agent:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      llm-agent:
+        condition: service_started
+    networks:
+      - oddiya-network
+    restart: unless-stopped
+
+  # LLM Agent
+  llm-agent:
+    build:
+      context: ./services/llm-agent
+      dockerfile: Dockerfile
+    container_name: oddiya-llm-agent
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      AWS_REGION: ap-northeast-2
+      BEDROCK_MODEL_ID: anthropic.claude-3-sonnet-20240229-v1:0
+      KAKAO_LOCAL_API_KEY: ${KAKAO_LOCAL_API_KEY:-test-key}
+      MOCK_MODE: "true"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - oddiya-network
+    restart: unless-stopped
+
+  # Video Service
+  video-service:
+    build:
+      context: ./services/video-service
+      dockerfile: Dockerfile
+    container_name: oddiya-video-service
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: oddiya
+      DB_USER: oddiya_user
+      DB_PASSWORD: oddiya_password_dev
+      AWS_REGION: ap-northeast-2
+      SQS_QUEUE_URL: ${SQS_QUEUE_URL:-}
+      S3_BUCKET: ${S3_BUCKET:-oddiya-storage}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - oddiya-network
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: oddiya-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      plan-service:
+        condition: service_started
+      video-service:
+        condition: service_started
+    networks:
+      - oddiya-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  oddiya-network:
+    driver: bridge
+
