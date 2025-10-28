@@ -5,6 +5,13 @@
 2. **READ BEFORE WRITE** - Always use Read tool to check existing files before making changes
 3. **PREFER UPDATES** - When adding features, update existing files rather than creating new ones
 4. **NO DUPLICATE FILES** - Check for existing implementations before creating new files
+5. **NEVER HARDCODE** - Always use configuration files (YAML/JSON/properties) for data
+   - ❌ NO switch/case for data
+   - ❌ NO if/else chains for configuration
+   - ❌ NO inline strings for content (prompts, messages, activities)
+   - ✅ USE external configuration files
+   - ✅ USE database for dynamic data
+   - ✅ USE property files for settings
 
 ## Project Overview
 - **Name:** Oddiya (v1.3 - Hybrid Self-Hosted)

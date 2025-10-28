@@ -6,9 +6,57 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI-powered mobile travel planner with automated short-form video generation. 8-week MVP targeting real-world deployment on AWS EKS with resource-constrained infrastructure.
 
-**Critical Rule:** ALWAYS edit existing files instead of creating new ones. Read files first before making changes.
+**Critical Rules:**
+1. **ALWAYS edit existing files** instead of creating new ones. Read files first before making changes.
+2. **NEVER hardcode data** - Use configuration files (YAML/JSON/properties) instead
 
 **Documentation:** All docs are now in `docs/` directory with organized structure. See `docs/README.md` for index.
+
+## 🚫 No Hardcoding Principle
+
+**NEVER hardcode in code:**
+- ❌ Travel destinations in switch/case statements
+- ❌ Prompts in Java/Python code
+- ❌ Restaurant names in if/else chains
+- ❌ UI messages inline
+- ❌ Configuration values
+- ❌ Business logic data
+
+**ALWAYS use configuration:**
+- ✅ YAML files for structured data (`default-activities.yaml`)
+- ✅ Properties files for settings (`application.yml`)
+- ✅ Database for dynamic content
+- ✅ Separate prompt files (`prompts/system_prompts.yaml`)
+- ✅ JSON for API responses
+- ✅ Environment variables for secrets
+
+**Examples:**
+
+❌ **Bad (Hardcoded):**
+```java
+if (location.equals("Seoul")) {
+    activity = "Visit Gyeongbokgung Palace";
+} else if (location.equals("Busan")) {
+    activity = "Visit Haeundae Beach";
+}
+```
+
+✅ **Good (Configuration):**
+```java
+// Load from YAML file
+Map<String, String> activity = activityLoader.getActivity(location);
+```
+
+❌ **Bad (Hardcoded):**
+```python
+prompt = "Create a travel plan for Seoul with these attractions: Gyeongbokgung, Myeongdong..."
+```
+
+✅ **Good (Configuration):**
+```python
+# Load from prompts/planning.yaml
+prompt = prompt_loader.get_planning_prompt(location="Seoul")
+```
 
 ## Architecture Overview
 
