@@ -376,73 +376,126 @@ public class WebAppController {
                 
                 let detailsHTML = '';
                 if (plan.details && plan.details.length > 0) {
-                    detailsHTML = plan.details.map(detail => `
+                    detailsHTML = plan.details.map(detail => {
+                        // Parse activity string into structured parts
+                        const activities = detail.activity.split(', ').map(act => {
+                            const match = act.match(/(Morning|Afternoon|Evening):\\s*(.+?)\\s*\\((₩[^)]+)\\)/);
+                            if (match) {
+                                return {
+                                    period: match[1],
+                                    description: match[2],
+                                    cost: match[3]
+                                };
+                            }
+                            return null;
+                        }).filter(Boolean);
+                        
+                        const icons = {
+                            'Morning': '🌅',
+                            'Afternoon': '☀️',
+                            'Evening': '🌙'
+                        };
+                        
+                        return `
                         <div class="card">
-                            <div class="card-title">📅 Day ${detail.day}: ${detail.location}</div>
-                            <div class="card-subtitle">${detail.activity}</div>
-                            ${detail.details ? `
-                                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0;">
-                                    ${detail.details.morning ? `
-                                        <div style="margin-bottom: 8px;">
-                                            <strong>🌅 Morning (${detail.details.morning.time})</strong><br/>
-                                            📍 ${detail.details.morning.location}<br/>
-                                            💰 ₩${detail.details.morning.cost ? detail.details.morning.cost.toLocaleString() : 'Free'}
-                                        </div>
-                                    ` : ''}
-                                    ${detail.details.afternoon ? `
-                                        <div style="margin-bottom: 8px;">
-                                            <strong>☀️ Afternoon (${detail.details.afternoon.time})</strong><br/>
-                                            📍 ${detail.details.afternoon.location}<br/>
-                                            💰 ₩${detail.details.afternoon.cost ? detail.details.afternoon.cost.toLocaleString() : 'Free'}
-                                        </div>
-                                    ` : ''}
-                                    ${detail.details.evening ? `
-                                        <div>
-                                            <strong>🌙 Evening (${detail.details.evening.time})</strong><br/>
-                                            ${detail.details.evening.activity}<br/>
-                                            💰 ₩${detail.details.evening.cost ? detail.details.evening.cost.toLocaleString() : 'Free'}
-                                        </div>
-                                    ` : ''}
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; margin: -16px -16px 16px -16px; border-radius: 12px 12px 0 0;">
+                                <div style="color: white; font-size: 16px; font-weight: 700;">Day ${detail.day}</div>
+                                <div style="color: rgba(255,255,255,0.9); font-size: 20px; font-weight: 700; margin-top: 4px;">
+                                    📍 ${detail.location}
                                 </div>
-                            ` : ''}
+                            </div>
+                            
+                            ${activities.length > 0 ? activities.map(act => `
+                                <div style="background: #f8f9fa; padding: 14px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #667eea;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <div style="font-size: 15px; font-weight: 700; color: #667eea;">
+                                            ${icons[act.period]} ${act.period}
+                                        </div>
+                                        <div style="background: #667eea; color: white; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">
+                                            ${act.cost}
+                                        </div>
+                                    </div>
+                                    <div style="color: #333; font-size: 14px; line-height: 1.5;">
+                                        ${act.description}
+                                    </div>
+                                </div>
+                            `).join('') : `
+                                <div style="color: #666; font-size: 14px; line-height: 1.6;">
+                                    ${detail.activity}
+                                </div>
+                            `}
+                            
                             ${detail.weatherTip ? `
-                                <div style="margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 8px;">
-                                    ${detail.weatherTip}
+                                <div style="margin-top: 12px; padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 10px; border-left: 4px solid #2196F3;">
+                                    <div style="font-size: 13px; font-weight: 600; color: #1976D2; margin-bottom: 4px;">
+                                        🌤️ Weather Tip
+                                    </div>
+                                    <div style="font-size: 13px; color: #333;">
+                                        ${detail.weatherTip}
+                                    </div>
                                 </div>
                             ` : ''}
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
+                }
+                
+                // Calculate total budget from activities
+                let totalBudget = 0;
+                if (plan.details) {
+                    plan.details.forEach(detail => {
+                        const costs = detail.activity.match(/₩([0-9,]+)/g);
+                        if (costs) {
+                            costs.forEach(cost => {
+                                totalBudget += parseInt(cost.replace(/[₩,]/g, ''));
+                            });
+                        }
+                    });
                 }
                 
                 container.innerHTML = `
-                    <div class="card">
-                        <div class="card-title">${plan.title}</div>
-                        <div class="card-subtitle">
-                            ${new Date(plan.startDate).toLocaleDateString()} - 
-                            ${new Date(plan.endDate).toLocaleDateString()}
+                    <button class="button button-secondary" onclick="loadPlans()" style="margin-bottom: 16px;">
+                        ← Back to Plans
+                    </button>
+                    
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 16px; color: white; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                        <div style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">
+                            ${plan.title}
                         </div>
-                        ${plan.totalEstimatedCost ? `
-                            <div class="card-meta">
-                                💰 Total Budget: ₩${plan.totalEstimatedCost.toLocaleString()}
+                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 16px;">
+                            📅 ${new Date(plan.startDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric'})} - 
+                            ${new Date(plan.endDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})}
+                        </div>
+                        ${totalBudget > 0 ? `
+                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; display: inline-block;">
+                                <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Estimated Total Budget</div>
+                                <div style="font-size: 28px; font-weight: 700;">₩${totalBudget.toLocaleString()}</div>
                             </div>
                         ` : ''}
-                        ${plan.weatherSummary ? `
-                            <div class="card-meta">
-                                🌤️ Weather: ${plan.weatherSummary}
-                            </div>
-                        ` : ''}
-                        <button class="button button-secondary" onclick="loadPlans()">← Back to List</button>
                     </div>
                     
-                    <h3 style="margin: 20px 0 12px 0;">Daily Itinerary</h3>
+                    <div style="font-size: 18px; font-weight: 700; color: #333; margin-bottom: 16px;">
+                        📋 Daily Itinerary
+                    </div>
+                    
                     ${detailsHTML}
                     
                     ${plan.tips && plan.tips.length > 0 ? `
-                        <div class="card">
-                            <div class="card-title">💡 Travel Tips</div>
-                            ${plan.tips.map(tip => `<div style="margin: 8px 0;">• ${tip}</div>`).join('')}
+                        <div class="card" style="background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border: 2px solid #ffc107;">
+                            <div style="font-size: 18px; font-weight: 700; color: #f57c00; margin-bottom: 12px;">
+                                💡 Travel Tips
+                            </div>
+                            ${plan.tips.map(tip => `
+                                <div style="padding: 8px 0; border-bottom: 1px dashed #ffe082; color: #333;">
+                                    ${tip}
+                                </div>
+                            `).join('')}
                         </div>
                     ` : ''}
+                    
+                    <button class="button" onclick="loadPlans()" style="margin-top: 20px;">
+                        ← Back to All Plans
+                    </button>
                 `;
             } catch (error) {
                 container.innerHTML = '<div class="error-message">Failed to load plan details</div>';
