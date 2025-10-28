@@ -268,9 +268,9 @@ public class WebAppController {
         </div>
         
         <div class="nav">
-            <div class="nav-item active" onclick="showPage('plans')">📝 여행</div>
-            <div class="nav-item" onclick="showPage('videos')">🎥 영상</div>
-            <div class="nav-item" onclick="showPage('profile')">👤 프로필</div>
+            <div class="nav-item active" onclick="showPage('plans', this)">📝 여행</div>
+            <div class="nav-item" onclick="showPage('videos', this)">🎥 영상</div>
+            <div class="nav-item" onclick="showPage('profile', this)">👤 프로필</div>
         </div>
         
         <div class="content">
@@ -303,12 +303,21 @@ public class WebAppController {
         const USER_ID = 1; // Demo user
         
         // Show page
-        function showPage(pageName) {
+        function showPage(pageName, clickedElement) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             
             document.getElementById(pageName + '-page').classList.add('active');
-            event.target.classList.add('active');
+            if (clickedElement) {
+                clickedElement.classList.add('active');
+            } else {
+                // Find and activate the corresponding nav item
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    if (item.textContent.includes(pageName === 'plans' ? '여행' : pageName === 'videos' ? '영상' : '프로필')) {
+                        item.classList.add('active');
+                    }
+                });
+            }
             
             if (pageName === 'plans') loadPlans();
             if (pageName === 'videos') loadVideos();
