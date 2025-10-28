@@ -190,7 +190,11 @@ public class SimpleMobileController {
         }
 
         // 상세 보기
+        let currentPlanId = null;
+        
         async function showDetail(id) {
+            currentPlanId = id;
+            
             try {
                 const response = await fetch(API + '/api/plans/' + id, {
                     headers: {'X-User-Id': USER_ID}
@@ -206,7 +210,6 @@ public class SimpleMobileController {
                 `;
 
                 plan.details.forEach(detail => {
-                    // 활동 파싱
                     const activities = detail.activity.split(', ').map(act => {
                         const match = act.match(/(Morning|Afternoon|Evening):\\s*(.+?)\\s*\\((₩[^)]+|무료)\\)/);
                         if (match) {
@@ -232,11 +235,147 @@ public class SimpleMobileController {
                         </div>
                     `;
                 });
+                
+                // 사진 업로드 섹션
+                html += `
+                    <div class="card">
+                        <h3>📸 여행 사진 추가</h3>
+                        <p style="color: #666; margin: 8px 0;">여행의 추억을 사진으로 남겨보세요!</p>
+                        <input type="file" id="photos" multiple accept="image/*" style="margin: 12px 0;">
+                        <div id="photo-preview" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0;"></div>
+                        <button class="button" onclick="uploadPhotos()">📤 사진 업로드</button>
+                    </div>
+                `;
+                
+                // 영상 생성 버튼 (사진이 있으면)
+                if (plan.photos && plan.photos.length > 0) {
+                    html += `
+                        <div class="card">
+                            <h3>🎬 여행 영상 만들기</h3>
+                            <p style="color: #666; margin: 8px 0;">업로드한 ${plan.photos.length}장의 사진으로 멋진 영상을 만들어드립니다!</p>
+                            <button class="button" onclick="createVideo()">🎬 영상 생성 시작</button>
+                        </div>
+                    `;
+                }
 
                 document.getElementById('plans').innerHTML = html;
+                
+                // 파일 선택 이벤트
+                document.getElementById('photos').addEventListener('change', previewPhotos);
+                
             } catch (error) {
                 alert('상세 정보를 불러올 수 없습니다');
             }
+        }
+        
+        // 사진 미리보기
+        function previewPhotos(event) {
+            const files = event.target.files;
+            const preview = document.getElementById('photo-preview');
+            preview.innerHTML = '';
+            
+            for (let i = 0; i < Math.min(files.length, 10); i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.innerHTML += `
+                        <img src="${e.target.result}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;">
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // 사진 업로드
+        async function uploadPhotos() {
+            const files = document.getElementById('photos').files;
+            
+            if (files.length === 0) {
+                alert('사진을 선택해주세요');
+                return;
+            }
+            
+            alert('📤 ' + files.length + '장의 사진 업로드 중...');
+            
+            try {
+                for (let i = 0; i < Math.min(files.length, 10); i++) {
+                    // Mock upload (실제로는 S3 presigned URL 사용)
+                    const photoUrl = 'https://picsum.photos/1080/1920?random=' + Date.now() + '_' + i;
+                    
+                    await fetch(API + '/api/plans/' + currentPlanId + '/photos', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-User-Id': USER_ID
+                        },
+                        body: JSON.stringify({
+                            photoUrl: photoUrl,
+                            s3Key: 'photos/user' + USER_ID + '/plan' + currentPlanId + '/photo' + i + '.jpg',
+                            order: i + 1
+                        })
+                    });
+                }
+                
+                alert('✅ ' + files.length + '장의 사진이 업로드되었습니다!');
+                showDetail(currentPlanId); // 새로고침
+                
+            } catch (error) {
+                alert('❌ 업로드에 실패했습니다');
+            }
+        }
+        
+        // 영상 생성
+        async function createVideo() {
+            if (!confirm('업로드한 사진으로 영상을 만드시겠습니까?\\n(약 2-3분 소요)')) {
+                return;
+            }
+            
+            alert('🎬 영상 생성을 시작합니다...');
+            
+            try {
+                const response = await fetch(API + '/api/plans/' + currentPlanId + '/create-video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Id': USER_ID,
+                        'Idempotency-Key': crypto.randomUUID()
+                    },
+                    body: JSON.stringify({template: 'default'})
+                });
+                
+                const video = await response.json();
+                
+                alert('✅ 영상 생성이 시작되었습니다!\\n완료되면 알려드립니다.');
+                
+                // 상태 확인 (5초마다)
+                checkVideoStatus(video.id);
+                
+            } catch (error) {
+                alert('❌ 영상 생성 요청에 실패했습니다');
+            }
+        }
+        
+        // 영상 상태 확인
+        function checkVideoStatus(videoId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(API + '/api/videos/' + videoId, {
+                        headers: {'X-User-Id': USER_ID}
+                    });
+                    const video = await response.json();
+                    
+                    if (video.status === 'COMPLETED') {
+                        clearInterval(interval);
+                        alert('🎉 영상이 완성되었습니다!');
+                        showDetail(currentPlanId);
+                    } else if (video.status === 'FAILED') {
+                        clearInterval(interval);
+                        alert('❌ 영상 생성에 실패했습니다');
+                    }
+                } catch (error) {
+                    clearInterval(interval);
+                }
+            }, 5000);
         }
     </script>
 </body>
