@@ -35,6 +35,21 @@ public class TravelPlan {
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlanDetail> details = new ArrayList<>();
 
+    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PlanPhoto> photos = new ArrayList<>();
+
+    @Column(length = 20)
+    private String status = "DRAFT";  // DRAFT, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+
+    private LocalDateTime confirmedAt;
+
+    private LocalDateTime completedAt;
+
+    @Column(length = 10)
+    private String budgetLevel = "medium";  // low, medium, high
+
+    private Integer totalCost = 0;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

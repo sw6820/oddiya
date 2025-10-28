@@ -198,5 +198,50 @@ public class PlanService {
 
         planRepository.delete(plan);
     }
+    
+    @Transactional
+    public PlanResponse confirmPlan(Long planId, Long userId) {
+        TravelPlan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found"));
+
+        if (!plan.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        plan.setStatus("CONFIRMED");
+        plan.setConfirmedAt(java.time.LocalDateTime.now());
+
+        TravelPlan updated = planRepository.save(plan);
+        return PlanResponse.fromEntity(updated);
+    }
+    
+    @Transactional
+    public PlanResponse completePlan(Long planId, Long userId) {
+        TravelPlan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found"));
+
+        if (!plan.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        plan.setStatus("COMPLETED");
+        plan.setCompletedAt(java.time.LocalDateTime.now());
+
+        TravelPlan updated = planRepository.save(plan);
+        return PlanResponse.fromEntity(updated);
+    }
+    
+    public List<String> getPhotoUrls(Long planId) {
+        TravelPlan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        
+        return plan.getPhotos().stream()
+                .sorted((a, b) -> Integer.compare(
+                    a.getUploadOrder() != null ? a.getUploadOrder() : 0,
+                    b.getUploadOrder() != null ? b.getUploadOrder() : 0
+                ))
+                .map(PlanPhoto::getPhotoUrl)
+                .collect(java.util.stream.Collectors.toList());
+    }
 }
 

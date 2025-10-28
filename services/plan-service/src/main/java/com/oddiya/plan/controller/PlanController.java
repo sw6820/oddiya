@@ -57,5 +57,22 @@ public class PlanController {
         planService.deletePlan(id, userId);
         return ResponseEntity.ok(Map.of("message", "Plan deleted successfully"));
     }
+    
+    @PatchMapping("/{id}/confirm")
+    public ResponseEntity<PlanResponse> confirmPlan(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+        return ResponseEntity.ok(planService.confirmPlan(id, userId));
+    }
+    
+    @PatchMapping("/{id}/complete")
+    public ResponseEntity<PlanResponse> completePlan(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId
+    ) {
+        return ResponseEntity.ok(planService.completePlan(id, userId));
+    }
 }
+
 

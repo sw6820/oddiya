@@ -21,6 +21,11 @@ public class VideoService {
 
     @Transactional
     public VideoJobResponse createVideoJob(Long userId, UUID idempotencyKey, CreateVideoRequest request) {
+        return createVideoJob(userId, idempotencyKey, request, null);
+    }
+    
+    @Transactional
+    public VideoJobResponse createVideoJob(Long userId, UUID idempotencyKey, CreateVideoRequest request, Long planId) {
         // Check idempotency
         Optional<VideoJob> existing = jobRepository.findByIdempotencyKey(idempotencyKey);
         if (existing.isPresent()) {
@@ -33,7 +38,9 @@ public class VideoService {
         job.setStatus("PENDING");
         job.setPhotoUrls(request.getPhotoUrls().toArray(new String[0]));
         job.setTemplate(request.getTemplate());
+        job.setTemplateName(request.getTemplate());
         job.setIdempotencyKey(idempotencyKey);
+        job.setPlanId(planId);  // Link to plan if provided
 
         VideoJob savedJob = jobRepository.save(job);
 
