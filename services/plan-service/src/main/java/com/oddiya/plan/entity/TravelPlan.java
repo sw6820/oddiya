@@ -35,8 +35,8 @@ public class TravelPlan {
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlanDetail> details = new ArrayList<>();
 
-    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PlanPhoto> photos = new ArrayList<>();
+    // Photo 관계 제거 - 완전 분리 (의존성 없음)
+    // Photos는 PhotoService에서 plan_id로 조회
 
     @Column(length = 20)
     private String status = "DRAFT";  // DRAFT, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
