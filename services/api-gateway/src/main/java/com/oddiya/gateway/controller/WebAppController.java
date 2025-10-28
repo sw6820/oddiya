@@ -268,29 +268,29 @@ public class WebAppController {
         </div>
         
         <div class="nav">
-            <div class="nav-item active" onclick="showPage('plans')">📝 Plans</div>
-            <div class="nav-item" onclick="showPage('videos')">🎥 Videos</div>
-            <div class="nav-item" onclick="showPage('profile')">👤 Profile</div>
+            <div class="nav-item active" onclick="showPage('plans')">📝 여행</div>
+            <div class="nav-item" onclick="showPage('videos')">🎥 영상</div>
+            <div class="nav-item" onclick="showPage('profile')">👤 프로필</div>
         </div>
         
         <div class="content">
             <!-- Plans Page -->
             <div id="plans-page" class="page active">
-                <h2 style="margin-bottom: 16px;">My Travel Plans</h2>
+                <h2 style="margin-bottom: 16px;">내 여행 계획</h2>
                 <div id="plans-list"></div>
-                <button class="button" onclick="showCreatePlanForm()">+ Create New Plan</button>
+                <button class="button" onclick="showCreatePlanForm()">+ 새 여행 계획 만들기</button>
             </div>
             
             <!-- Videos Page -->
             <div id="videos-page" class="page">
-                <h2 style="margin-bottom: 16px;">My Videos</h2>
+                <h2 style="margin-bottom: 16px;">내 여행 영상</h2>
                 <div id="videos-list"></div>
-                <button class="button" onclick="showCreateVideoForm()">+ Create Video</button>
+                <button class="button" onclick="showCreateVideoForm()">+ 새 영상 만들기</button>
             </div>
             
             <!-- Profile Page -->
             <div id="profile-page" class="page">
-                <h2 style="margin-bottom: 16px;">Profile</h2>
+                <h2 style="margin-bottom: 16px;">내 프로필</h2>
                 <div id="profile-info"></div>
             </div>
         </div>
