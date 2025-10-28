@@ -46,20 +46,31 @@ Welcome to the Oddiya project documentation. This directory contains all technic
 
 ## 🏗️ Project Status
 
-**MVP Complete:** All 7 services implemented ✅
+**Full-Stack MVP Complete:** 95+ commits ✅
 
-- ✅ Auth Service (OAuth, JWT, Redis)
-- ✅ API Gateway (routing, validation)
-- ✅ User Service (profile management)
-- ✅ Plan Service (CRUD + AI)
-- ✅ LLM Agent (Bedrock integration)
-- ✅ Video Service (SQS producer)
-- ✅ Video Worker (FFmpeg pipeline)
-- ✅ Infrastructure (Docker, CI/CD, Terraform)
+### Services
+- ✅ 7 Microservices (Auth, Gateway, User, Plan, Video×2, LLM Agent)
+- ✅ Complete User Journey (plan → confirm → photos → video → profile)
+- ✅ Mobile Web App (interactive, Korean UI)
+- ✅ React Native foundation
 
-**Ready for deployment to AWS EKS!**
+### Key Achievements
+- ✅ **No Hardcoding** - All data externalized to YAML
+- ✅ **Prompt Management** - Separated from code
+- ✅ **LangChain + LangGraph** - Iterative AI refinement
+- ✅ **Free Text Location** - Any Korean city/region
+- ✅ **Real Places** - Specific named locations
+- ✅ **Plan Status** - DRAFT → CONFIRMED → COMPLETED
+- ✅ **Photo Upload** - S3 presigned URLs
+- ✅ **Video Linking** - Videos connected to plans
+- ✅ **Profile Stats** - Travel collection with statistics
+
+**Ready for:**
+- ✅ Local testing (fully functional)
+- ✅ Real AI (with Bedrock API keys)
+- ⏳ AWS deployment (Terraform + K8s)
 
 ---
 
-**Last Updated:** 2025-01-27 (55 commits, 144 files)
+**Last Updated:** 2025-10-29 (95 commits, 280+ files)
 

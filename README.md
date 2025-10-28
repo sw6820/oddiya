@@ -26,16 +26,29 @@ curl http://localhost:8080/actuator/health
 
 ## Current Status
 
-**MVP Complete:** All 7 services implemented ✅
+**Full-Stack MVP Complete:** 95+ commits ✅
 
+### Backend (7 Microservices)
 - ✅ **Auth Service** - OAuth 2.0, RS256 JWT, refresh tokens
-- ✅ **API Gateway** - Spring Cloud Gateway with JWT validation
+- ✅ **API Gateway** - Routing, JWT validation, mobile web app
 - ✅ **User Service** - Profile management, internal API
-- ✅ **Plan Service** - Travel plans CRUD + LLM integration
-- ✅ **LLM Agent** - Bedrock integration, Kakao API, Redis caching
-- ✅ **Video Service** - SQS producer, idempotency handling
-- ✅ **Video Worker** - FFmpeg pipeline, S3 integration, SNS notifications
-- ✅ **Infrastructure** - Docker Compose, Dockerfiles, CI/CD, Terraform VPC
+- ✅ **Plan Service** - AI travel plans with user journey (confirm, photos, videos)
+- ✅ **LLM Agent** - LangChain + LangGraph + LangSmith ready
+- ✅ **Video Service** - SQS producer, plan linking
+- ✅ **Video Worker** - FFmpeg pipeline, S3, SNS
+
+### Mobile
+- ✅ **Mobile Web App** - Complete user journey (plan → confirm → upload → video → profile)
+- ✅ **React Native** - Foundation with Redux, API client, components
+
+### AI & Configuration
+- ✅ **No Hardcoding** - All data in YAML files
+- ✅ **Prompt Management** - Separated from code
+- ✅ **Real Places** - Specific restaurants and attractions
+- ✅ **Free Text Input** - Any Korean city/region
+
+### Infrastructure
+- ✅ Docker Compose, Dockerfiles, CI/CD, Terraform VPC
 
 ## Architecture
 
@@ -57,9 +70,15 @@ curl http://localhost:8080/actuator/health
 
 ## Core Features
 
+✅ **Complete User Journey** - Plan → Confirm → Upload Photos → Generate Video → Profile Collection  
+✅ **AI Travel Planning** - LangChain + LangGraph with iterative refinement  
+✅ **No Hardcoding** - All data in YAML configuration files  
+✅ **Prompt Management** - Separated from code, easy to update  
+✅ **Free Text Location** - Any Korean city (Seoul, Busan, Jeju, Gyeongju, Jeonju, etc.)  
+✅ **Real Places** - Specific restaurants and attractions (명동교자, 올레국수, 해녀의 집)  
+✅ **Mobile Web App** - Fully functional with beautiful UI  
+✅ **Video Generation** - FFmpeg with plan-photo linking  
 ✅ **OAuth Authentication** - Google (Apple ready)  
-✅ **AI Travel Planning** - AWS Bedrock + Kakao Local API  
-✅ **Video Generation** - Automated short-form videos with FFmpeg  
 ✅ **Microservices** - 7 independently deployable services  
 ✅ **Cloud-Ready** - Docker + Kubernetes + Terraform  
 ✅ **CI/CD** - Automatic testing on every push
