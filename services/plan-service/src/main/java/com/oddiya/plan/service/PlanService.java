@@ -96,55 +96,55 @@ public class PlanService {
             if (location.equals("Seoul")) {
                 switch (day) {
                     case 1:
-                        detail.setLocation("Gyeongbokgung Palace & Bukchon");
-                        detail.setActivity("Morning: Royal palace tour (₩3,000), Afternoon: Traditional Hanok village walk (Free), Evening: Insadong traditional street (₩30,000 dinner)");
+                        detail.setLocation("경복궁 & 북촌한옥마을");
+                        detail.setActivity("Morning: 궁궐 투어 및 수문장 교대식 관람 (₩3,000), Afternoon: 전통 한옥마을 산책 (무료), Evening: 인사동 전통거리 저녁식사 (₩30,000)");
                         break;
                     case 2:
-                        detail.setLocation("Myeongdong & N Seoul Tower");
-                        detail.setActivity("Morning: Shopping at Myeongdong (₩50,000), Afternoon: Cable car to N Seoul Tower (₩14,000), Evening: Han River picnic (₩20,000)");
+                        detail.setLocation("명동 & N서울타워");
+                        detail.setActivity("Morning: 명동 쇼핑 및 거리음식 (₩50,000), Afternoon: 남산 케이블카 및 N서울타워 전망대 (₩14,000), Evening: 한강공원 야경 감상 (₩20,000)");
                         break;
                     case 3:
-                        detail.setLocation("Gangnam & COEX");
-                        detail.setActivity("Morning: Gangnam shopping (₩40,000), Afternoon: COEX Aquarium (₩27,000), Evening: K-Star Road (₩25,000)");
+                        detail.setLocation("강남 & 코엑스");
+                        detail.setActivity("Morning: 강남역 쇼핑 및 카페 (₩40,000), Afternoon: 코엑스 아쿠아리움 (₩27,000), Evening: K-스타로드 및 강남 맛집 투어 (₩25,000)");
                         break;
                     default:
-                        detail.setLocation("Seoul City Exploration");
-                        detail.setActivity("Explore local markets, try street food, and enjoy the city atmosphere");
+                        detail.setLocation("서울 도심 탐방");
+                        detail.setActivity("Morning: 전통시장 구경 (₩20,000), Afternoon: 카페거리 탐방 (₩15,000), Evening: 야경 명소 방문 (₩25,000)");
                         break;
                 }
             } else if (location.equals("Busan")) {
                 switch (day) {
                     case 1:
-                        detail.setLocation("Haeundae Beach & Dongbaek Island");
-                        detail.setActivity("Morning: Beach walk (Free), Afternoon: Dongbaek Island trail (Free), Evening: Seafood dinner at Jagalchi Market (₩40,000)");
+                        detail.setLocation("해운대 해수욕장 & 동백섬");
+                        detail.setActivity("Morning: 해변 산책 및 카페 (무료), Afternoon: 동백섬 둘레길 (무료), Evening: 자갈치시장 해산물 저녁 (₩40,000)");
                         break;
                     case 2:
-                        detail.setLocation("Gamcheon Culture Village");
-                        detail.setActivity("Morning: Colorful village tour (Free), Afternoon: Songdo Beach cable car (₩15,000), Evening: Gwangalli Beach (₩30,000)");
+                        detail.setLocation("감천문화마을");
+                        detail.setActivity("Morning: 알록달록 벽화마을 투어 (무료), Afternoon: 송도 해상케이블카 (₩15,000), Evening: 광안리 해변 야경 (₩30,000)");
                         break;
                     default:
-                        detail.setLocation("Busan Coastal Tour");
-                        detail.setActivity("Explore beaches and seafood markets");
+                        detail.setLocation("부산 해안 투어");
+                        detail.setActivity("Morning: 해변 산책 (무료), Afternoon: 해산물 시장 구경 (₩20,000), Evening: 야경 명소 (₩25,000)");
                         break;
                 }
             } else if (location.equals("Jeju")) {
                 switch (day) {
                     case 1:
-                        detail.setLocation("Seongsan Ilchulbong & Seopjikoji");
-                        detail.setActivity("Morning: Sunrise peak hike (₩5,000), Afternoon: Seopjikoji coast walk (Free), Evening: Black pork BBQ (₩35,000)");
+                        detail.setLocation("성산일출봉 & 섭지코지");
+                        detail.setActivity("Morning: 일출봉 등반 및 해돋이 (₩5,000), Afternoon: 섭지코지 해안산책 (무료), Evening: 흑돼지 구이 맛집 (₩35,000)");
                         break;
                     case 2:
-                        detail.setLocation("Hallasan & Folk Village");
-                        detail.setActivity("Morning: National park trail (₩5,000), Afternoon: Folk village (₩11,000), Evening: Local seafood (₩40,000)");
+                        detail.setLocation("한라산 & 제주민속촌");
+                        detail.setActivity("Morning: 한라산 둘레길 트레킹 (₩5,000), Afternoon: 제주민속촌 관람 (₩11,000), Evening: 해산물 요리 (₩40,000)");
                         break;
                     default:
-                        detail.setLocation("Jeju Nature Exploration");
-                        detail.setActivity("Explore natural beauty and local culture");
+                        detail.setLocation("제주 자연 탐방");
+                        detail.setActivity("Morning: 오름 등반 (무료), Afternoon: 카페거리 투어 (₩20,000), Evening: 올레시장 먹거리 (₩25,000)");
                         break;
                 }
             } else {
-                detail.setLocation(location + " Highlights");
-                detail.setActivity("Explore major attractions, try local cuisine, and enjoy the culture");
+                detail.setLocation(location + " 명소 탐방");
+                detail.setActivity("Morning: 주요 관광지 방문 (₩20,000), Afternoon: 현지 맛집 투어 (₩25,000), Evening: 야경 명소 (₩20,000)");
             }
             
             details.add(detail);

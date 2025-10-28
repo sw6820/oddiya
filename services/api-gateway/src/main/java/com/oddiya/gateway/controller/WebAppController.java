@@ -396,6 +396,12 @@ public class WebAppController {
                             'Evening': '🌙'
                         };
                         
+                        const koreanPeriods = {
+                            'Morning': '오전',
+                            'Afternoon': '오후',
+                            'Evening': '저녁'
+                        };
+                        
                         return `
                         <div class="card">
                             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; margin: -16px -16px 16px -16px; border-radius: 12px 12px 0 0;">
@@ -409,7 +415,7 @@ public class WebAppController {
                                 <div style="background: #f8f9fa; padding: 14px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #667eea;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                         <div style="font-size: 15px; font-weight: 700; color: #667eea;">
-                                            ${icons[act.period]} ${act.period}
+                                            ${icons[act.period]} ${koreanPeriods[act.period]}
                                         </div>
                                         <div style="background: #667eea; color: white; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">
                                             ${act.cost}
@@ -428,7 +434,7 @@ public class WebAppController {
                             ${detail.weatherTip ? `
                                 <div style="margin-top: 12px; padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 10px; border-left: 4px solid #2196F3;">
                                     <div style="font-size: 13px; font-weight: 600; color: #1976D2; margin-bottom: 4px;">
-                                        🌤️ Weather Tip
+                                        🌤️ 날씨 정보
                                     </div>
                                     <div style="font-size: 13px; color: #333;">
                                         ${detail.weatherTip}
@@ -455,7 +461,7 @@ public class WebAppController {
                 
                 container.innerHTML = `
                     <button class="button button-secondary" onclick="loadPlans()" style="margin-bottom: 16px;">
-                        ← Back to Plans
+                        ← 목록으로
                     </button>
                     
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 16px; color: white; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
@@ -463,19 +469,19 @@ public class WebAppController {
                             ${plan.title}
                         </div>
                         <div style="font-size: 14px; opacity: 0.9; margin-bottom: 16px;">
-                            📅 ${new Date(plan.startDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric'})} - 
-                            ${new Date(plan.endDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})}
+                            📅 ${new Date(plan.startDate).toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric'})} - 
+                            ${new Date(plan.endDate).toLocaleDateString('ko-KR', {month: 'long', day: 'numeric'})}
                         </div>
                         ${totalBudget > 0 ? `
                             <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 10px; display: inline-block;">
-                                <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">Estimated Total Budget</div>
+                                <div style="font-size: 13px; opacity: 0.9; margin-bottom: 4px;">예상 총 경비</div>
                                 <div style="font-size: 28px; font-weight: 700;">₩${totalBudget.toLocaleString()}</div>
                             </div>
                         ` : ''}
                     </div>
                     
                     <div style="font-size: 18px; font-weight: 700; color: #333; margin-bottom: 16px;">
-                        📋 Daily Itinerary
+                        📋 일별 여행 일정
                     </div>
                     
                     ${detailsHTML}
@@ -483,7 +489,7 @@ public class WebAppController {
                     ${plan.tips && plan.tips.length > 0 ? `
                         <div class="card" style="background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border: 2px solid #ffc107;">
                             <div style="font-size: 18px; font-weight: 700; color: #f57c00; margin-bottom: 12px;">
-                                💡 Travel Tips
+                                💡 여행 팁
                             </div>
                             ${plan.tips.map(tip => `
                                 <div style="padding: 8px 0; border-bottom: 1px dashed #ffe082; color: #333;">
@@ -494,7 +500,7 @@ public class WebAppController {
                     ` : ''}
                     
                     <button class="button" onclick="loadPlans()" style="margin-top: 20px;">
-                        ← Back to All Plans
+                        ← 목록으로 돌아가기
                     </button>
                 `;
             } catch (error) {
@@ -569,23 +575,45 @@ public class WebAppController {
         // Create Plan Form
         function showCreatePlanForm() {
             const container = document.getElementById('plans-list');
-            container.innerHTML = `
+                container.innerHTML = `
                 <div class="card">
-                    <h3 style="margin-bottom: 16px;">Create New Travel Plan</h3>
+                    <h3 style="margin-bottom: 16px;">새 여행 계획 만들기</h3>
+                    
                     <div class="form-group">
-                        <label class="form-label">Title</label>
-                        <input type="text" class="form-input" id="plan-title" placeholder="Seoul Weekend Trip">
+                        <label class="form-label">여행지 선택</label>
+                        <select class="form-input" id="plan-location" style="font-size: 16px;">
+                            <option value="Seoul">🏛️ 서울 (Seoul)</option>
+                            <option value="Busan">🌊 부산 (Busan)</option>
+                            <option value="Jeju">🌴 제주도 (Jeju)</option>
+                        </select>
                     </div>
+                    
                     <div class="form-group">
-                        <label class="form-label">Start Date</label>
+                        <label class="form-label">여행 제목</label>
+                        <input type="text" class="form-input" id="plan-title" placeholder="예: 서울 주말 여행">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">시작일</label>
                         <input type="date" class="form-input" id="plan-start">
                     </div>
+                    
                     <div class="form-group">
-                        <label class="form-label">End Date</label>
+                        <label class="form-label">종료일</label>
                         <input type="date" class="form-input" id="plan-end">
                     </div>
-                    <button class="button" onclick="createPlan()">🤖 Generate AI Plan</button>
-                    <button class="button button-secondary" onclick="loadPlans()">Cancel</button>
+                    
+                    <div class="form-group">
+                        <label class="form-label">예산 수준</label>
+                        <select class="form-input" id="plan-budget" style="font-size: 16px;">
+                            <option value="low">💰 저예산 (1일 ₩50,000)</option>
+                            <option value="medium" selected>💰💰 중예산 (1일 ₩100,000)</option>
+                            <option value="high">💰💰💰 고예산 (1일 ₩200,000)</option>
+                        </select>
+                    </div>
+                    
+                    <button class="button" onclick="createPlan()">🤖 AI 여행 계획 생성</button>
+                    <button class="button button-secondary" onclick="loadPlans()">취소</button>
                 </div>
             `;
             
@@ -601,17 +629,25 @@ public class WebAppController {
         
         // Create Plan
         async function createPlan() {
+            const location = document.getElementById('plan-location').value;
             const title = document.getElementById('plan-title').value;
             const startDate = document.getElementById('plan-start').value;
             const endDate = document.getElementById('plan-end').value;
+            const budget = document.getElementById('plan-budget').value;
             
             if (!title || !startDate || !endDate) {
-                showToast('❌ Please fill in all fields');
+                showToast('❌ 모든 항목을 입력해주세요');
                 return;
             }
             
+            // Add location to title if not already included
+            const finalTitle = title.includes(location) || 
+                              title.includes(['Seoul', 'Busan', 'Jeju'].find(l => location.includes(l))) 
+                              ? title 
+                              : `${location} ${title}`;
+            
             const container = document.getElementById('plans-list');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>AI is creating your plan...</p></div>';
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>AI가 여행 계획을 생성하고 있습니다...</p></div>';
             
             try {
                 const response = await fetch(`${API_BASE}/api/plans`, {
@@ -620,17 +656,21 @@ public class WebAppController {
                         'Content-Type': 'application/json',
                         'X-User-Id': USER_ID
                     },
-                    body: JSON.stringify({ title, startDate, endDate })
+                    body: JSON.stringify({ 
+                        title: finalTitle,
+                        startDate, 
+                        endDate
+                    })
                 });
                 
                 if (response.ok) {
-                    showToast('✅ Plan created successfully!');
+                    showToast('✅ 여행 계획이 생성되었습니다!');
                     loadPlans();
                 } else {
                     throw new Error('Failed to create plan');
                 }
             } catch (error) {
-                container.innerHTML = '<div class="error-message">Failed to create plan. Please try again.</div>';
+                container.innerHTML = '<div class="error-message">계획 생성에 실패했습니다. 다시 시도해주세요.</div>';
                 setTimeout(loadPlans, 2000);
             }
         }
