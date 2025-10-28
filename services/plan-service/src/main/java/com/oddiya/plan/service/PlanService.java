@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 public class PlanService {
     private final TravelPlanRepository planRepository;
     private final LlmAgentClient llmAgentClient;
+    private final DefaultActivityLoader activityLoader;
 
     @Transactional
     public Mono<PlanResponse> createPlan(Long userId, CreatePlanRequest request) {

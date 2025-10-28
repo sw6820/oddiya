@@ -28,6 +28,9 @@ dependencies {
     // HTTP client for calling LLM Agent
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     
+    // YAML parsing for default activities
+    implementation 'org.yaml:snakeyaml:2.0'
+    
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
