@@ -338,25 +338,43 @@ public class WebAppController {
                     container.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-icon">📝</div>
-                            <div class="empty-title">No travel plans yet</div>
-                            <div class="empty-text">Create your first AI-powered travel plan!</div>
+                            <div class="empty-title">아직 여행 계획이 없습니다</div>
+                            <div class="empty-text">첫 AI 여행 계획을 만들어보세요!</div>
                         </div>
                     `;
                 } else {
-                    container.innerHTML = plans.map(plan => `
+                    container.innerHTML = plans.map(plan => {
+                        const statusBadges = {
+                            'DRAFT': {text: '📝 초안', color: '#999'},
+                            'CONFIRMED': {text: '✅ 확정', color: '#4CAF50'},
+                            'IN_PROGRESS': {text: '✈️ 진행중', color: '#2196F3'},
+                            'COMPLETED': {text: '✨ 완료', color: '#9C27B0'},
+                            'CANCELLED': {text: '❌ 취소', color: '#F44336'}
+                        };
+                        const badge = statusBadges[plan.status] || statusBadges['DRAFT'];
+                        
+                        return `
                         <div class="card" onclick="showPlanDetails(${plan.id})" style="cursor: pointer;">
-                            <div class="card-title">${plan.title}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div class="card-title">${plan.title}</div>
+                                <span style="background: ${badge.color}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap;">
+                                    ${badge.text}
+                                </span>
+                            </div>
                             <div class="card-subtitle">
-                                ${new Date(plan.startDate).toLocaleDateString()} - 
-                                ${new Date(plan.endDate).toLocaleDateString()}
+                                ${new Date(plan.startDate).toLocaleDateString('ko-KR')} - 
+                                ${new Date(plan.endDate).toLocaleDateString('ko-KR')}
                             </div>
                             ${plan.details && plan.details.length > 0 ? 
-                                `<div class="card-meta">📍 ${plan.details.length} activities</div>` : ''}
+                                `<div class="card-meta">📍 ${plan.details.length}개 일정</div>` : ''}
+                            ${plan.photos && plan.photos.length > 0 ?
+                                `<div class="card-meta">📸 사진 ${plan.photos.length}장</div>` : ''}
                             <div style="margin-top: 12px; color: #667eea; font-size: 14px; font-weight: 600;">
-                                👆 Tap to see AI recommendations
+                                👆 탭하여 상세보기
                             </div>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
             } catch (error) {
                 container.innerHTML = '<div class="error-message">Failed to load plans</div>';
@@ -499,10 +517,310 @@ public class WebAppController {
                         </div>
                     ` : ''}
                     
-                    <button class="button" onclick="loadPlans()" style="margin-top: 20px;">
+                    <!-- Action buttons based on status -->
+                    <div style="margin-top: 20px;">
+                        ${plan.status === 'DRAFT' ? `
+                            <button class="button" onclick="confirmPlan(${plan.id})">
+                                ✅ 이 계획으로 확정하기
+                            </button>
+                        ` : ''}
+                        
+                        ${(plan.status === 'CONFIRMED' || plan.status === 'IN_PROGRESS') && isPastDate(plan.endDate) ? `
+                            <button class="button" onclick="showPhotoUpload(${plan.id})">
+                                📸 여행 사진 추가하기
+                            </button>
+                        ` : ''}
+                        
+                        ${plan.photos && plan.photos.length > 0 && !plan.videoId ? `
+                            <button class="button" onclick="createVideoFromPlan(${plan.id})">
+                                🎬 사진으로 영상 만들기 (${plan.photos.length}장)
+                            </button>
+                        ` : ''}
+                        
+                        ${plan.videoId ? `
+                            <button class="button" onclick="playVideo(${plan.videoId})">
+                                ▶️ 여행 영상 보기
+                            </button>
+                        ` : ''}
+                        
+                        <button class="button button-secondary" onclick="loadPlans()">
+                            ← 목록으로 돌아가기
+                        </button>
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = '<div class="error-message">계획을 불러오는데 실패했습니다</div>';
+                setTimeout(loadPlans, 2000);
+            }
+        }
+        
+        // Helper function
+        function isPastDate(dateString) {
+            return new Date(dateString) < new Date();
+        }
+        
+        // Confirm Plan
+        async function confirmPlan(planId) {
+            if (!confirm('이 계획을 확정하시겠습니까?')) return;
+            
+            try {
+                await fetch(`${API_BASE}/api/plans/${planId}/confirm`, {
+                    method: 'PATCH',
+                    headers: {'X-User-Id': USER_ID}
+                });
+                
+                showToast('✅ 여행 계획이 확정되었습니다!');
+                showPlanDetails(planId);
+            } catch (error) {
+                showToast('❌ 확정에 실패했습니다');
+            }
+        }
+        
+        // Photo Upload
+        function showPhotoUpload(planId) {
+            const container = document.getElementById('plans-list');
+            container.innerHTML = `
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">📸 여행 사진 추가</h3>
+                    <p style="color: #666; margin-bottom: 16px;">
+                        여행의 추억을 사진으로 남겨보세요!<br/>
+                        최대 10장까지 업로드 가능합니다.
+                    </p>
+                    
+                    <input type="file" 
+                           id="photo-files" 
+                           multiple 
+                           accept="image/*"
+                           style="margin-bottom: 16px;"
+                           onchange="previewPhotos(event)">
+                    
+                    <div id="photo-previews" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 16px;"></div>
+                    
+                    <button class="button" onclick="uploadPhotos(${planId})" id="upload-btn" disabled>
+                        ☁️ 사진 업로드
+                    </button>
+                    <button class="button button-secondary" onclick="showPlanDetails(${planId})">
+                        취소
+                    </button>
+                </div>
+            `;
+        }
+        
+        function previewPhotos(event) {
+            const files = event.target.files;
+            const previews = document.getElementById('photo-previews');
+            const uploadBtn = document.getElementById('upload-btn');
+            
+            if (files.length > 0) {
+                uploadBtn.disabled = false;
+            }
+            
+            previews.innerHTML = '';
+            for (let i = 0; i < Math.min(files.length, 10); i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previews.innerHTML += `
+                        <img src="${e.target.result}" 
+                             style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;">
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function uploadPhotos(planId) {
+            const files = document.getElementById('photo-files').files;
+            const container = document.getElementById('plans-list');
+            
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>사진 업로드 중...</p></div>';
+            
+            try {
+                for (let i = 0; i < Math.min(files.length, 10); i++) {
+                    // For now, use photo placeholder
+                    // In production, would upload to S3
+                    const photoUrl = `https://picsum.photos/1080/1920?random=${Date.now()}_${i}`;
+                    
+                    await fetch(`${API_BASE}/api/plans/${planId}/photos`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-User-Id': USER_ID
+                        },
+                        body: JSON.stringify({
+                            photoUrl: photoUrl,
+                            s3Key: `photos/user${USER_ID}/plan${planId}/photo${i}.jpg`,
+                            order: i + 1
+                        })
+                    });
+                }
+                
+                showToast(`✅ ${files.length}장의 사진이 업로드되었습니다!`);
+                showPlanDetails(planId);
+            } catch (error) {
+                showToast('❌ 업로드에 실패했습니다');
+                showPlanDetails(planId);
+            }
+        }
+        
+        // Create Video from Plan
+        async function createVideoFromPlan(planId) {
+            if (!confirm('업로드한 사진으로 영상을 만드시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/plans/${planId}/create-video`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Id': USER_ID,
+                        'Idempotency-Key': crypto.randomUUID()
+                    },
+                    body: JSON.stringify({template: 'default'})
+                });
+                
+                const video = await response.json();
+                
+                showToast('🎬 영상 생성이 시작되었습니다! (2-3분 소요)');
+                
+                // Poll video status
+                pollVideoStatus(video.id, planId);
+                
+            } catch (error) {
+                showToast('❌ 영상 생성 요청에 실패했습니다');
+            }
+        }
+        
+        function pollVideoStatus(videoId, planId) {
+            const checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/videos/${videoId}`, {
+                        headers: {'X-User-Id': USER_ID}
+                    });
+                    const video = await response.json();
+                    
+                    if (video.status === 'COMPLETED') {
+                        clearInterval(checkInterval);
+                        showToast('🎉 영상이 완성되었습니다!');
+                        showPlanDetails(planId);
+                    } else if (video.status === 'FAILED') {
+                        clearInterval(checkInterval);
+                        showToast('❌ 영상 생성에 실패했습니다');
+                    }
+                } catch (error) {
+                    clearInterval(checkInterval);
+                }
+            }, 5000);  // Check every 5 seconds
+        }
+        
+        // Play Video (placeholder)
+        function playVideo(videoId) {
+            showToast('🎬 영상 재생 기능은 곧 추가됩니다!');
+        }
+        
+        // Load Profile with Trip Collection
+        async function loadProfile() {
+            const container = document.getElementById('profile-info');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>프로필 로딩 중...</p></div>';
+            
+            try {
+                // Get user profile
+                const userResponse = await fetch(`${API_BASE}/api/users/me`, {
+                    headers: { 'X-User-Id': USER_ID }
+                });
+                const user = await userResponse.json();
+                
+                // Get trip collection
+                const tripsResponse = await fetch(`${API_BASE}/api/profile/trips`, {
+                    headers: { 'X-User-Id': USER_ID }
+                });
+                const trips = await tripsResponse.json();
+                
+                container.innerHTML = `
+                    <!-- User Info -->
+                    <div class="card">
+                        <div class="card-title">${user.name}</div>
+                        <div class="card-subtitle">${user.email}</div>
+                        <div class="card-meta">
+                            <span>가입일: ${new Date(user.createdAt).toLocaleDateString('ko-KR')}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistics -->
+                    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <div style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
+                            📊 여행 통계
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700;">${trips.statistics?.totalTrips || 0}</div>
+                                <div style="font-size: 13px; opacity: 0.9;">총 여행</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700;">${trips.statistics?.totalDays || 0}</div>
+                                <div style="font-size: 13px; opacity: 0.9;">여행 일수</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700;">${trips.statistics?.citiesVisited?.length || 0}</div>
+                                <div style="font-size: 13px; opacity: 0.9;">방문 도시</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; font-weight: 700;">${trips.statistics?.totalVideos || 0}</div>
+                                <div style="font-size: 13px; opacity: 0.9;">여행 영상</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Upcoming Trips -->
+                    ${trips.upcomingTrips && trips.upcomingTrips.length > 0 ? `
+                        <h3 style="margin: 20px 0 12px 0;">🎒 다가오는 여행</h3>
+                        ${trips.upcomingTrips.map(trip => `
+                            <div class="card" onclick="showPlanDetails(${trip.id})" style="cursor: pointer; border-left: 4px solid #4CAF50;">
+                                <div class="card-title">${trip.title}</div>
+                                <div style="color: #4CAF50; font-size: 20px; font-weight: 700; margin-top: 8px;">
+                                    D-${trip.daysUntil}일
+                                </div>
+                            </div>
+                        `).join('')}
+                    ` : ''}
+                    
+                    <!-- Completed Trips -->
+                    ${trips.completedTrips && trips.completedTrips.length > 0 ? `
+                        <h3 style="margin: 20px 0 12px 0;">✨ 완료된 여행</h3>
+                        ${trips.completedTrips.map(trip => `
+                            <div class="card" onclick="showPlanDetails(${trip.plan.id})" style="cursor: pointer;">
+                                ${trip.photos && trip.photos.length > 0 ? `
+                                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 12px; border-radius: 8px; overflow: hidden;">
+                                        ${trip.photos.slice(0, 3).map(photo => `
+                                            <img src="${photo.url}" style="width: 100%; aspect-ratio: 1; object-fit: cover;">
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                                <div class="card-title">${trip.plan.title}</div>
+                                <div class="card-meta">
+                                    📅 ${new Date(trip.plan.startDate).toLocaleDateString('ko-KR')} - 
+                                    ${new Date(trip.plan.endDate).toLocaleDateString('ko-KR')}
+                                </div>
+                                <div class="card-meta">
+                                    📸 사진 ${trip.photos?.length || 0}장
+                                    ${trip.video ? ' • 🎬 영상 완성' : ''}
+                                </div>
+                                ${trip.plan.totalCost ? `
+                                    <div class="card-meta">
+                                        💰 총 경비: ₩${trip.plan.totalCost.toLocaleString()}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    ` : ''}
+                    
+                    <button class="button button-secondary" onclick="loadPlans()" style="margin-top: 20px;">
                         ← 목록으로 돌아가기
                     </button>
                 `;
+            } catch (error) {
+                container.innerHTML = '<div class="error-message">프로필을 불러오는데 실패했습니다</div>';
+            }
+        }
             } catch (error) {
                 container.innerHTML = '<div class="error-message">Failed to load plan details</div>';
                 setTimeout(loadPlans, 2000);
