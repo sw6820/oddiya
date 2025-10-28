@@ -4,7 +4,24 @@ All notable changes to the Oddiya project.
 
 ## [Unreleased]
 
-### Added - Latest Changes (Commits 80-95)
+### Added - Latest Changes (Commits 96-105)
+- Bedrock API key secure configuration (.env.bedrock)
+- SimpleMobileController for stable mobile web app (/mobile)
+- Default activities in YAML with detailed format (timeline, restaurants, themes)
+- LangChain dependency resolution (langsmith 0.0.77)
+- Comprehensive REMAINING_TASKS.md with priorities
+- TODO list for tracking progress
+- Photo/Video architecture documentation
+- No Hardcoding guide and enforcement
+
+### Changed (Commits 96-105)
+- Decoupled PlanPhoto from TravelPlan entity (loose coupling)
+- Updated requirements.txt with flexible version ranges
+- Fixed API Gateway routing for photos and profile
+- Improved mobile web UI with Korean labels
+- Plan Service entity simplified for stability
+
+### Added - Previous Changes (Commits 80-95)
 - Complete user journey implementation (plan → confirm → photos → video → profile)
 - No Hardcoding principle enforced across project
 - YAML-based configuration for travel activities (`default-activities.yaml`)

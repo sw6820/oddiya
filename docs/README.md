@@ -46,7 +46,7 @@ Welcome to the Oddiya project documentation. This directory contains all technic
 
 ## 🏗️ Project Status
 
-**Full-Stack MVP Complete:** 95+ commits ✅
+**Full-Stack MVP Complete:** 105 commits ✅
 
 ### Services
 - ✅ 7 Microservices (Auth, Gateway, User, Plan, Video×2, LLM Agent)
@@ -72,5 +72,14 @@ Welcome to the Oddiya project documentation. This directory contains all technic
 
 ---
 
-**Last Updated:** 2025-10-29 (95 commits, 280+ files)
+**Last Updated:** 2025-10-29 (105 commits, 280+ files)
+
+### Recent Changes (Commits 96-105)
+- ✅ Bedrock API key configured securely
+- ✅ LangChain dependencies resolved (langsmith 0.0.77)
+- ✅ Decoupled Photo from Plan entity (loose coupling)
+- ✅ SimpleMobileController added (`/mobile` endpoint)
+- ✅ No hardcoding enforced (YAML configs)
+- ✅ REMAINING_TASKS.md created
+- ✅ Complete TODO list established
 
