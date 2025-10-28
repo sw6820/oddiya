@@ -1,21 +1,24 @@
 # Core dependencies
 fastapi==0.104.1
-uvicorn==0.24.0
+uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-dotenv==1.0.0
 pyyaml==6.0.1
 
 # AWS
-boto3==1.29.0
+boto3>=1.29.0
 
 # HTTP client
-httpx==0.25.2
+httpx>=0.25.0
 
 # Redis
-redis==5.0.1
+redis>=5.0.0
 
-# LangChain - 버전 충돌 해결을 위해 최신 버전 사용
+# LangChain - 의존성 충돌 완전 해결
+# 모든 패키지를 최신 호환 버전으로
+langchain-core>=0.1.0
+langchain-community>=0.0.38
 langchain>=0.1.0
-langchain-aws>=0.1.0  
+langchain-aws>=0.1.0
 langgraph>=0.0.20
-langsmith>=0.0.77  # langchain이 요구하는 최소 버전
+langsmith>=0.0.87  # 안정적인 최신 버전

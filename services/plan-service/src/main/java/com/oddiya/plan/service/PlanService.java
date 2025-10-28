@@ -261,16 +261,9 @@ public class PlanService {
     }
     
     public List<String> getPhotoUrls(Long planId) {
-        TravelPlan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
-        
-        return plan.getPhotos().stream()
-                .sorted((a, b) -> Integer.compare(
-                    a.getUploadOrder() != null ? a.getUploadOrder() : 0,
-                    b.getUploadOrder() != null ? b.getUploadOrder() : 0
-                ))
-                .map(PlanPhoto::getPhotoUrl)
-                .collect(java.util.stream.Collectors.toList());
+        // Photos는 별도 PhotoService에서 조회
+        // TravelPlan과 decoupled됨
+        return new java.util.ArrayList<>();  // Empty list, PhotoService에서 처리
     }
 }
 
