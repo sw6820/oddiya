@@ -2,6 +2,7 @@ package com.oddiya.plan.service;
 
 import com.oddiya.plan.dto.*;
 import com.oddiya.plan.entity.PlanDetail;
+import com.oddiya.plan.entity.PlanPhoto;
 import com.oddiya.plan.entity.TravelPlan;
 import com.oddiya.plan.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
@@ -73,11 +74,30 @@ public class PlanService {
     }
     
     private String extractLocation(String title) {
-        // Extract city name from title (simple logic)
-        if (title.contains("서울") || title.toLowerCase().contains("seoul")) return "Seoul";
-        if (title.contains("부산") || title.toLowerCase().contains("busan")) return "Busan";
-        if (title.contains("제주") || title.toLowerCase().contains("jeju")) return "Jeju";
-        return "Seoul";  // Default
+        // Extract location from title - more flexible
+        String lowerTitle = title.toLowerCase();
+        
+        // Major cities
+        if (title.contains("서울") || lowerTitle.contains("seoul")) return "Seoul";
+        if (title.contains("부산") || lowerTitle.contains("busan")) return "Busan";
+        if (title.contains("제주") || lowerTitle.contains("jeju")) return "Jeju";
+        if (title.contains("경주") || lowerTitle.contains("gyeongju")) return "Gyeongju";
+        if (title.contains("전주") || lowerTitle.contains("jeonju")) return "Jeonju";
+        if (title.contains("속초") || lowerTitle.contains("sokcho")) return "Sokcho";
+        if (title.contains("강릉") || lowerTitle.contains("gangneung")) return "Gangneung";
+        if (title.contains("여수") || lowerTitle.contains("yeosu")) return "Yeosu";
+        if (title.contains("대구") || lowerTitle.contains("daegu")) return "Daegu";
+        if (title.contains("광주") || lowerTitle.contains("gwangju")) return "Gwangju";
+        if (title.contains("인천") || lowerTitle.contains("incheon")) return "Incheon";
+        
+        // If title is just the location, use it directly
+        // Extract first word which is likely the location
+        String[] words = title.split(" ");
+        if (words.length > 0) {
+            return words[0];  // Use first word as location
+        }
+        
+        return "Seoul";  // Fallback
     }
     
     private List<PlanDetail> generateDefaultActivities(String location, TravelPlan plan) {

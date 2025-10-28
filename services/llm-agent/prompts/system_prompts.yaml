@@ -13,7 +13,9 @@ system_message: |
   - 교통편과 이동 시간을 고려합니다
 
 planning_prompt_template: |
-  {num_days}일간의 {location} 여행 계획을 생성해주세요.
+  "{location}" 지역의 {num_days}일 여행 계획을 생성해주세요.
+  
+  중요: {location}이 어떤 지역인지 파악하고, 해당 지역의 실제 존재하는 관광지, 식당, 명소를 조사하여 포함하세요.
   
   여행 정보:
   - 제목: {title}
@@ -33,35 +35,42 @@ planning_prompt_template: |
   
   요구사항:
   1. 정확히 {num_days}일의 일정을 만들어주세요
-  2. {location}의 실제 관광지를 사용하세요 (경복궁, 명동, 해운대 등)
-  3. 각 활동마다 구체적인 시간을 명시하세요
+  2. {location}의 실제 존재하는 관광지, 식당, 카페를 구체적으로 명시하세요
+     - 예: "맛집" (X) → "명동교자 칼국수" (O)
+     - 예: "해변" (X) → "해운대 해수욕장" (O)
+     - 예: "식당" (X) → "올레국수 본점" (O)
+  3. 각 활동마다 구체적인 시간을 명시하세요 (09:00-12:00 형식)
   4. 날씨를 고려한 실내/실외 활동 균형을 맞추세요
-  5. {budget_level} 예산에 맞는 비용을 계산하세요
-  6. 오전, 오후, 저녁 활동을 모두 포함하세요
+  5. {budget_level} 예산에 맞는 현실적인 비용을 계산하세요
+  6. 반드시 오전, 오후, 저녁 활동을 모두 포함하세요
   7. 실용적인 팁(교통, 예약, 타이밍)을 제공하세요
   
-  출력 형식 (JSON):
+  출력 형식 (반드시 이 형식을 따르세요):
   {{
-      "title": "개선된 제목",
+      "title": "{location} {num_days}일 여행",
       "days": [
           {{
               "day": 1,
-              "location": "구체적인 장소 이름",
-              "activity": "주요 활동 요약",
-              "details": {{
-                  "morning": {{"time": "09:00-12:00", "activity": "...", "location": "...", "cost": 10000}},
-                  "afternoon": {{"time": "13:00-17:00", "activity": "...", "location": "...", "cost": 15000}},
-                  "evening": {{"time": "18:00-21:00", "activity": "...", "location": "...", "cost": 20000}}
-              }},
-              "estimatedCost": 45000,
-              "weatherTip": "날씨 기반 팁"
+              "location": "구체적인 지역명 (예: 경복궁 & 북촌한옥마을)",
+              "activity": "Morning: [구체적 장소명] (₩비용), Afternoon: [구체적 장소명] (₩비용), Evening: [구체적 식당명 - 메뉴] (₩비용)",
+              "estimatedCost": 일일총비용숫자,
+              "weatherTip": "날씨 기반 조언"
+          }},
+          {{
+              "day": 2,
+              "location": "구체적인 지역명",
+              "activity": "Morning: [구체적 장소명] (₩비용), Afternoon: [구체적 장소명] (₩비용), Evening: [구체적 식당명 - 메뉴] (₩비용)",
+              "estimatedCost": 일일총비용숫자,
+              "weatherTip": "날씨 기반 조언"
           }}
       ],
-      "total_estimated_cost": 135000,
+      "total_estimated_cost": 총비용숫자,
       "currency": "KRW",
       "weather_summary": "전체 날씨 요약",
-      "tips": ["팁 1", "팁 2", "팁 3"]
+      "tips": ["💰 예산 팁", "🌤️ 날씨 팁", "🚇 교통 팁", "📱 앱 추천"]
   }}
+  
+  중요: activity 필드는 반드시 "Morning: ..., Afternoon: ..., Evening: ..." 형식으로 작성하세요!
   
   실용적이고 현실적인 여행 계획을 만들어주세요.
 

@@ -898,17 +898,16 @@ public class WebAppController {
                     <h3 style="margin-bottom: 16px;">새 여행 계획 만들기</h3>
                     
                     <div class="form-group">
-                        <label class="form-label">여행지 선택</label>
-                        <select class="form-input" id="plan-location" style="font-size: 16px;">
-                            <option value="Seoul">🏛️ 서울 (Seoul)</option>
-                            <option value="Busan">🌊 부산 (Busan)</option>
-                            <option value="Jeju">🌴 제주도 (Jeju)</option>
-                        </select>
+                        <label class="form-label">여행지 (자유 입력)</label>
+                        <input type="text" class="form-input" id="plan-location" placeholder="예: 서울, 부산, 제주도, 경주, 전주, 속초 등" style="font-size: 16px;">
+                        <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                            💡 한국의 모든 도시/지역 입력 가능 (AI가 해당 지역의 실제 명소를 찾아드립니다)
+                        </div>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">여행 제목</label>
-                        <input type="text" class="form-input" id="plan-title" placeholder="예: 서울 주말 여행">
+                        <label class="form-label">여행 제목 (선택)</label>
+                        <input type="text" class="form-input" id="plan-title" placeholder="예: 힐링 여행, 미식 투어, 가족 여행 등">
                     </div>
                     
                     <div class="form-group">
@@ -958,11 +957,10 @@ public class WebAppController {
                 return;
             }
             
-            // Add location to title if not already included
-            const finalTitle = title.includes(location) || 
-                              title.includes(['Seoul', 'Busan', 'Jeju'].find(l => location.includes(l))) 
-                              ? title 
-                              : `${location} ${title}`;
+            // Create meaningful title
+            const finalTitle = title.trim() 
+                ? (title.includes(location) ? title : `${location} ${title}`)
+                : `${location} 여행`;
             
             const container = document.getElementById('plans-list');
             container.innerHTML = '<div class="loading"><div class="spinner"></div><p>AI가 여행 계획을 생성하고 있습니다...</p></div>';
