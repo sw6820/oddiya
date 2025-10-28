@@ -97,15 +97,15 @@ public class PlanService {
                 switch (day) {
                     case 1:
                         detail.setLocation("경복궁 & 북촌한옥마을");
-                        detail.setActivity("Morning: 궁궐 투어 및 수문장 교대식 관람 (₩3,000), Afternoon: 전통 한옥마을 산책 (무료), Evening: 인사동 전통거리 저녁식사 (₩30,000)");
+                        detail.setActivity("Morning: 경복궁 궁궐 투어 및 수문장 교대식 관람 (₩3,000), Afternoon: 북촌한옥마을 8경 투어 및 전통찻집 (₩15,000), Evening: 인사동 쌈지길 - 진진바라 족발보쌈 (₩30,000)");
                         break;
                     case 2:
-                        detail.setLocation("명동 & N서울타워");
-                        detail.setActivity("Morning: 명동 쇼핑 및 거리음식 (₩50,000), Afternoon: 남산 케이블카 및 N서울타워 전망대 (₩14,000), Evening: 한강공원 야경 감상 (₩20,000)");
+                        detail.setLocation("명동 & 남산");
+                        detail.setActivity("Morning: 명동 쇼핑 및 명동교자 칼국수 (₩15,000), Afternoon: 남산 케이블카 및 N서울타워 전망대 (₩21,000), Evening: 한강 반포한강공원 달빛무지개분수 (₩20,000)");
                         break;
                     case 3:
-                        detail.setLocation("강남 & 코엑스");
-                        detail.setActivity("Morning: 강남역 쇼핑 및 카페 (₩40,000), Afternoon: 코엑스 아쿠아리움 (₩27,000), Evening: K-스타로드 및 강남 맛집 투어 (₩25,000)");
+                        detail.setLocation("홍대 & 이태원");
+                        detail.setActivity("Morning: 홍대 거리 공연 및 플리마켓 (₩20,000), Afternoon: 이태원 앤틱가구거리 및 경리단길 (₩25,000), Evening: 이태원 세븐스프링스 삼겹살 (₩35,000)");
                         break;
                     default:
                         detail.setLocation("서울 도심 탐방");
@@ -116,11 +116,15 @@ public class PlanService {
                 switch (day) {
                     case 1:
                         detail.setLocation("해운대 해수욕장 & 동백섬");
-                        detail.setActivity("Morning: 해변 산책 및 카페 (무료), Afternoon: 동백섬 둘레길 (무료), Evening: 자갈치시장 해산물 저녁 (₩40,000)");
+                        detail.setActivity("Morning: 해운대 해변 산책 및 더베이101 전망대 (₩5,000), Afternoon: 동백섬 누리마루 APEC하우스 (무료), Evening: 민락동 회센터 - 활어회 정식 (₩40,000)");
                         break;
                     case 2:
-                        detail.setLocation("감천문화마을");
-                        detail.setActivity("Morning: 알록달록 벽화마을 투어 (무료), Afternoon: 송도 해상케이블카 (₩15,000), Evening: 광안리 해변 야경 (₩30,000)");
+                        detail.setLocation("감천문화마을 & 송도");
+                        detail.setActivity("Morning: 감천문화마을 골목길 투어 및 하늘전망대 (무료), Afternoon: 송도 해상케이블카 및 암남공원 (₩15,000), Evening: 광안리 해변 - 광안리 해변 돼지국밥 (₩30,000)");
+                        break;
+                    case 3:
+                        detail.setLocation("태종대 & 용두산공원");
+                        detail.setActivity("Morning: 태종대 유람선 투어 (₩8,000), Afternoon: 용두산공원 부산타워 및 광복동 쇼핑 (₩15,000), Evening: 국제시장 - 비빔당면 및 씨앗호떡 (₩20,000)");
                         break;
                     default:
                         detail.setLocation("부산 해안 투어");
@@ -130,16 +134,20 @@ public class PlanService {
             } else if (location.equals("Jeju")) {
                 switch (day) {
                     case 1:
-                        detail.setLocation("성산일출봉 & 섭지코지");
-                        detail.setActivity("Morning: 일출봉 등반 및 해돋이 (₩5,000), Afternoon: 섭지코지 해안산책 (무료), Evening: 흑돼지 구이 맛집 (₩35,000)");
+                        detail.setLocation("성산일출봉 & 우도");
+                        detail.setActivity("Morning: 성산일출봉 등반 및 일출 감상 (₩5,000), Afternoon: 우도 해상 관광 및 땅콩 아이스크림 (₩15,000), Evening: 돔베고기 정식 - 올레국수 본점 (₩35,000)");
                         break;
                     case 2:
-                        detail.setLocation("한라산 & 제주민속촌");
-                        detail.setActivity("Morning: 한라산 둘레길 트레킹 (₩5,000), Afternoon: 제주민속촌 관람 (₩11,000), Evening: 해산물 요리 (₩40,000)");
+                        detail.setLocation("한라산 어리목 코스 & 제주민속촌");
+                        detail.setActivity("Morning: 한라산 어리목 코스 트레킹 (무료), Afternoon: 제주민속촌 전통 가옥 관람 (₩11,000), Evening: 해녀의 집 - 성게비빔밥 (₩40,000)");
+                        break;
+                    case 3:
+                        detail.setLocation("협재 해수욕장 & 한림공원");
+                        detail.setActivity("Morning: 협재 해수욕장 및 비양도 조망 (무료), Afternoon: 한림공원 용암동굴 및 야자수길 (₩10,000), Evening: 애월 해안도로 - 테우 갈치조림 (₩30,000)");
                         break;
                     default:
-                        detail.setLocation("제주 자연 탐방");
-                        detail.setActivity("Morning: 오름 등반 (무료), Afternoon: 카페거리 투어 (₩20,000), Evening: 올레시장 먹거리 (₩25,000)");
+                        detail.setLocation("제주 올레길 탐방");
+                        detail.setActivity("Morning: 올레길 7코스 걷기 (무료), Afternoon: 카멜리아힐 동백꽃 정원 (₩9,000), Evening: 동문재래시장 먹거리 탐방 (₩25,000)");
                         break;
                 }
             } else {

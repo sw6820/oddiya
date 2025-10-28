@@ -8,7 +8,7 @@
 
 **프로젝트:** Oddiya v1.3 - AI 여행 플래너 + 자동 영상 생성
 **진행도:** 문서 작성 완료, 코드 구현 시작 전
-**전략 변경:** ~~외부 API 통합~~ → **AWS Bedrock Claude Sonnet 4.5 전용**
+**전략 변경:** ~~외부 API 통합~~ → **AWS Bedrock Claude 3.5 Sonnet 전용**
 
 ---
 
@@ -45,7 +45,7 @@ AWS ALB → Nginx Ingress → API Gateway (8080)
 ```
 User Input: "서울 3일, 2명, 중급 호텔, 예산 100만원"
     ↓
-AWS Bedrock Claude Sonnet 4.5 (1회 호출)
+AWS Bedrock Claude 3.5 Sonnet (1회 호출)
     ↓
 Output: 일정 + 장소 + 예산 + 교통 + 팁 (JSON)
     ↓
@@ -93,7 +93,7 @@ oddiya/
 | Python | FastAPI, Python 3.11 |
 | DB | PostgreSQL 17.0 (schema-per-service) |
 | Cache | Redis 7.4 |
-| AI | **AWS Bedrock Claude Sonnet 4.5** |
+| AI | **AWS Bedrock Claude 3.5 Sonnet** |
 | Queue | AWS SQS + DLQ |
 | Storage | AWS S3 |
 | Notify | AWS SNS |

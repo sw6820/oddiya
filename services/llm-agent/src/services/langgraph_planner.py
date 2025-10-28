@@ -63,7 +63,7 @@ class LangGraphPlanner:
         
         if not self.mock_mode:
             self.llm = ChatBedrock(
-                model_id=os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0"),
+                model_id=os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20241022-v2:0"),
                 region_name=os.getenv("AWS_REGION", "ap-northeast-2"),
                 model_kwargs={"temperature": 0.7, "max_tokens": 2048}
             )

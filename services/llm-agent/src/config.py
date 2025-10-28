@@ -5,9 +5,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings"""
     
-    # AWS Bedrock
+    # AWS Bedrock - Updated to Claude 3.5 Sonnet (latest available)
     aws_region: str = "ap-northeast-2"
-    bedrock_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+    bedrock_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     use_bedrock_mock: bool = True
     
     # Redis

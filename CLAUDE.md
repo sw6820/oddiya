@@ -210,7 +210,7 @@ SQS_QUEUE_URL=https://sqs.ap-northeast-2.amazonaws.com/{account}/oddiya-video-jo
 SNS_TOPIC_ARN=arn:aws:sns:ap-northeast-2:{account}:oddiya-notifications
 
 # Bedrock (LLM Agent only) - Claude Sonnet 4.5
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-5-20250929-v1:0
+BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 BEDROCK_REGION=us-east-1
 
 # OAuth (Auth Service only)
