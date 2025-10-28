@@ -1,32 +1,12 @@
-# FastAPI and server
 fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-pydantic-settings==2.1.0
-
-# AWS Bedrock
-boto3==1.29.7
-botocore==1.32.7
-
-# HTTP client for external APIs
+uvicorn==0.24.0
+boto3==1.29.0
 httpx==0.25.2
-
-# Redis client
 redis==5.0.1
-
-# Environment variables
+pydantic==2.5.0
+langchain==0.1.0
+langchain-aws==0.1.0
+langgraph==0.0.20
+langsmith==0.0.70
 python-dotenv==1.0.0
-
-# Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-httpx==0.27.0
-pytest-mock==3.12.0
-
-# Linting and formatting
-black==23.11.0
-flake8==6.1.0
-
-# Type hints
-types-redis==4.6.0.11
-
+pyyaml==6.0.1

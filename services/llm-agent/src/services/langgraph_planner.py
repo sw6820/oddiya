@@ -14,6 +14,7 @@ from langgraph.graph import StateGraph, END
 from langsmith import Client, traceable
 
 from src.services.weather_service import WeatherService
+from src.utils.prompt_loader import get_prompt_loader
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class LangGraphPlanner:
             self.llm = None  # Use mock responses
         
         self.weather_service = WeatherService()
+        self.prompt_loader = get_prompt_loader()
         
         # Build the planning graph
         self.graph = self._build_planning_graph()
@@ -128,8 +130,11 @@ class LangGraphPlanner:
         # Use weather data only (no Kakao API)
         state["weather_data"] = weather
         state["places_data"] = {}  # Claude has built-in Korea knowledge
+        
+        # Load system message from prompt file
+        system_msg = self.prompt_loader.get_system_message()
         state["messages"] = [
-            SystemMessage(content="You are an expert travel planner creating detailed itineraries.")
+            SystemMessage(content=system_msg)
         ]
         
         logger.info(f"[LangGraph] Context gathered: {len(places)} places, weather: {weather.get('condition')}")
@@ -221,15 +226,11 @@ class LangGraphPlanner:
         """Node 4: Refine plan based on feedback"""
         logger.info(f"[LangGraph] Refining plan based on {len(state['feedback'])} feedback items")
         
-        # Build refinement prompt
+        # Build refinement prompt using template
         feedback_text = "\n".join(f"- {fb}" for fb in state["feedback"])
-        refinement_prompt = f"""
-The current plan has these issues:
-{feedback_text}
-
-Please create an IMPROVED version that addresses these issues.
-Keep what works well, but fix the problems mentioned.
-"""
+        refinement_prompt = self.prompt_loader.get_refinement_prompt(
+            feedback=feedback_text
+        )
         
         if self.mock_mode or not self.llm:
             # Improve mock draft
@@ -273,77 +274,33 @@ Keep what works well, but fix the problems mentioned.
         return state
     
     def _build_planning_prompt(self, state: PlanState) -> str:
-        """Build comprehensive prompt with all context"""
+        """Build comprehensive prompt using template from file"""
         weather = state["weather_data"]
-        places = state["places_data"]
+        temp_data = weather.get('temperature', {})
         
-        attractions_list = "\n".join(
-            f"- {p.get('place_name', 'Unknown')} ({p.get('category_name', '')})"
-            for p in places.get("attractions", [])[:5]
+        # Budget level in Korean
+        budget_korean = {
+            'low': '저예산',
+            'medium': '중예산',
+            'high': '고예산'
+        }.get(state['budget'], '중예산')
+        
+        # Fill template with variables
+        prompt = self.prompt_loader.get_planning_prompt(
+            num_days=state['num_days'],
+            location=state['location'],
+            title=state['title'],
+            start_date=state['start_date'],
+            end_date=state['end_date'],
+            budget_level=budget_korean,
+            temperature=temp_data.get('current', 20),
+            temp_min=temp_data.get('min', 15),
+            temp_max=temp_data.get('max', 25),
+            weather_condition=weather.get('description', 'Mild'),
+            precipitation=weather.get('precipitation_probability', 0),
+            weather_recommendation=weather.get('recommendation', '날씨 확인 필요')
         )
         
-        restaurants_list = "\n".join(
-            f"- {p.get('place_name', 'Unknown')}"
-            for p in places.get("restaurants", [])[:5]
-        )
-        
-        prompt = f"""
-Create a detailed {state['num_days']}-day travel itinerary for {state['location']}.
-
-TRIP DETAILS:
-- Title: {state['title']}
-- Dates: {state['start_date']} to {state['end_date']}
-- Budget Level: {state['budget'].upper()}
-
-WEATHER FORECAST:
-- Temperature: {weather.get('temperature', {}).get('current', 20)}°C
-- Condition: {weather.get('description', 'Mild')}
-- Rain Probability: {weather.get('precipitation_probability', 0)}%
-- Recommendation: {weather.get('recommendation', 'Check weather')}
-
-LOCATION CONTEXT:
-You have extensive knowledge of Korea's tourist destinations, restaurants, and attractions.
-Use your knowledge to recommend specific, real places in {state['location']}.
-
-BUDGET GUIDELINES:
-- Low Budget (₩50,000/day): Public transport, budget meals, free attractions
-- Medium Budget (₩100,000/day): Mix of paid/free, decent restaurants, some taxis
-- High Budget (₩200,000/day): Premium experiences, fine dining, private transport
-
-REQUIREMENTS:
-1. Create exactly {state['num_days']} days of activities
-2. Use REAL places from the list above whenever possible
-3. Include specific times for each activity
-4. Consider the weather forecast in your recommendations
-5. Estimate costs for each activity based on budget level
-6. Include morning, afternoon, and evening activities for each day
-7. Add practical tips (transport, booking, timing)
-
-OUTPUT FORMAT (JSON):
-{{
-    "title": "Improved title",
-    "days": [
-        {{
-            "day": 1,
-            "location": "Specific place name",
-            "activity": "Main activities summary",
-            "details": {{
-                "morning": {{"time": "09:00-12:00", "activity": "...", "location": "...", "cost": 10000}},
-                "afternoon": {{"time": "13:00-17:00", "activity": "...", "location": "...", "cost": 15000}},
-                "evening": {{"time": "18:00-21:00", "activity": "...", "location": "...", "cost": 20000}}
-            }},
-            "estimatedCost": 45000,
-            "weatherTip": "Weather-based tip"
-        }}
-    ],
-    "total_estimated_cost": 135000,
-    "currency": "KRW",
-    "weather_summary": "Overall weather summary",
-    "tips": ["Tip 1", "Tip 2", "Tip 3"]
-}}
-
-Generate a practical, realistic travel plan.
-"""
         return prompt
     
     def _parse_llm_response(self, content: str, state: PlanState) -> Dict[str, Any]:
