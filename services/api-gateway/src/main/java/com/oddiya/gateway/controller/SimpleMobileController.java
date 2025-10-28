@@ -236,27 +236,44 @@ public class SimpleMobileController {
                     `;
                 });
                 
+                // 기존 업로드된 사진 표시
+                const photosResponse = await fetch(API + '/api/plans/' + id + '/photos', {
+                    headers: {'X-User-Id': USER_ID}
+                });
+                const existingPhotos = await photosResponse.json();
+                
+                if (existingPhotos && existingPhotos.length > 0) {
+                    html += `
+                        <div class="card">
+                            <h3>📸 업로드된 사진 (${existingPhotos.length}장)</h3>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0;">
+                                ${existingPhotos.map(photo => `
+                                    <img src="${photo.photoUrl}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;">
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 영상 생성 버튼
+                    html += `
+                        <div class="card">
+                            <h3>🎬 여행 영상 만들기</h3>
+                            <p style="color: #666; margin: 8px 0;">${existingPhotos.length}장의 사진으로 멋진 영상을 만들어드립니다!</p>
+                            <button class="button" onclick="createVideo()">🎬 영상 생성 시작 (약 2-3분)</button>
+                        </div>
+                    `;
+                }
+                
                 // 사진 업로드 섹션
                 html += `
                     <div class="card">
-                        <h3>📸 여행 사진 추가</h3>
-                        <p style="color: #666; margin: 8px 0;">여행의 추억을 사진으로 남겨보세요!</p>
+                        <h3>📸 ${existingPhotos.length > 0 ? '사진 더 추가하기' : '여행 사진 추가하기'}</h3>
+                        <p style="color: #666; margin: 8px 0;">여행의 추억을 사진으로 남겨보세요! (최대 10장)</p>
                         <input type="file" id="photos" multiple accept="image/*" style="margin: 12px 0;">
                         <div id="photo-preview" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0;"></div>
                         <button class="button" onclick="uploadPhotos()">📤 사진 업로드</button>
                     </div>
                 `;
-                
-                // 영상 생성 버튼 (사진이 있으면)
-                if (plan.photos && plan.photos.length > 0) {
-                    html += `
-                        <div class="card">
-                            <h3>🎬 여행 영상 만들기</h3>
-                            <p style="color: #666; margin: 8px 0;">업로드한 ${plan.photos.length}장의 사진으로 멋진 영상을 만들어드립니다!</p>
-                            <button class="button" onclick="createVideo()">🎬 영상 생성 시작</button>
-                        </div>
-                    `;
-                }
 
                 document.getElementById('plans').innerHTML = html;
                 
