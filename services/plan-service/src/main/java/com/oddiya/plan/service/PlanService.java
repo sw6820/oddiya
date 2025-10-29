@@ -75,10 +75,10 @@ public class PlanService {
     }
     
     private String extractLocation(String title) {
-        // Extract location from title - more flexible
+        // Extract location from title - flexible matching
         String lowerTitle = title.toLowerCase();
         
-        // Major cities
+        // Try to match city names (both Korean and English)
         if (title.contains("서울") || lowerTitle.contains("seoul")) return "Seoul";
         if (title.contains("부산") || lowerTitle.contains("busan")) return "Busan";
         if (title.contains("제주") || lowerTitle.contains("jeju")) return "Jeju";
@@ -86,16 +86,21 @@ public class PlanService {
         if (title.contains("전주") || lowerTitle.contains("jeonju")) return "Jeonju";
         if (title.contains("속초") || lowerTitle.contains("sokcho")) return "Sokcho";
         if (title.contains("강릉") || lowerTitle.contains("gangneung")) return "Gangneung";
+        if (title.contains("진주") || lowerTitle.contains("jinju")) return "Jinju";
         if (title.contains("여수") || lowerTitle.contains("yeosu")) return "Yeosu";
         if (title.contains("대구") || lowerTitle.contains("daegu")) return "Daegu";
         if (title.contains("광주") || lowerTitle.contains("gwangju")) return "Gwangju";
         if (title.contains("인천") || lowerTitle.contains("incheon")) return "Incheon";
+        if (title.contains("춘천") || lowerTitle.contains("chuncheon")) return "Chuncheon";
         
-        // If title is just the location, use it directly
-        // Extract first word which is likely the location
+        // First word as location (for cases like "Gyeongju 여행")
         String[] words = title.split(" ");
         if (words.length > 0) {
-            return words[0];  // Use first word as location
+            String firstWord = words[0];
+            // Capitalize first letter for matching YAML keys
+            if (firstWord.length() > 0) {
+                return firstWord.substring(0, 1).toUpperCase() + firstWord.substring(1);
+            }
         }
         
         return "Seoul";  // Fallback

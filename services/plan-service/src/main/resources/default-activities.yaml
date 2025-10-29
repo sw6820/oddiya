@@ -79,6 +79,28 @@ Gangneung:
     location: "오죽헌 & 선교장"
     activity: "Morning: 오죽헌 신사임당 유적 (₩3,000), Afternoon: 선교장 전통가옥 (₩5,000), Evening: 강문해변 물회 - 강문물회 (₩18,000)"
 
+Jinju:
+  day1:
+    location: "진주성 & 촉석루"
+    activity: "Morning: 진주성 및 촉석루 관람 (₩2,000), Afternoon: 의암별제 공원 산책 (무료), Evening: 진주냉면 - 진주회관 냉면 (₩9,000)"
+  day2:
+    location: "진양호 & 남강 유등축제"
+    activity: "Morning: 진양호 동물원 및 호수공원 (₩3,000), Afternoon: 진주시립박물관 (무료), Evening: 남강 유등 야경 및 비빔밥 - 진주비빔밥 (₩12,000)"
+  day3:
+    location: "진주 전통시장"
+    activity: "Morning: 중앙시장 재래시장 투어 (₩10,000), Afternoon: 진주 공예품 쇼핑 (₩15,000), Evening: 남강변 카페거리 (₩12,000)"
+
+Chuncheon:
+  day1:
+    location: "남이섬 & 춘천호반"
+    activity: "Morning: 남이섬 페리 및 산책 (₩13,000), Afternoon: 춘천호반 자전거길 (₩5,000), Evening: 춘천 닭갈비 - 명동닭갈비 (₩15,000)"
+  day2:
+    location: "소양강 댐 & 청평사"
+    activity: "Morning: 소양강댐 전망대 (무료), Afternoon: 청평사 등산 (₩2,000), Evening: 춘천 막국수 - 샘밭막국수 (₩8,000)"
+  day3:
+    location: "애니메이션박물관 & 의암호"
+    activity: "Morning: 애니메이션박물관 및 토이로봇관 (₩6,000), Afternoon: 의암호 스카이워크 (무료), Evening: 춘천 중앙시장 먹거리 (₩15,000)"
+
 # Add more cities as needed
 # This file can be edited without changing code
 
