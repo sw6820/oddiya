@@ -9,7 +9,14 @@ import reactor.core.publisher.Mono;
 public class SimpleMobileController {
 
     @GetMapping(value = "/mobile", produces = MediaType.TEXT_HTML_VALUE)
-    public Mono<String> simpleMobileApp() {
+    public Mono<String> simpleMobileApp(
+            org.springframework.http.server.reactive.ServerHttpResponse response
+    ) {
+        // 캐시 방지 헤더 추가
+        response.getHeaders().setCacheControl("no-cache, no-store, must-revalidate");
+        response.getHeaders().setPragma("no-cache");
+        response.getHeaders().setExpires(0);
+        
         return Mono.just("""
 <!DOCTYPE html>
 <html lang="ko">
