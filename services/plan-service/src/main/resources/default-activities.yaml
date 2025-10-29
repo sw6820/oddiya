@@ -35,6 +35,50 @@ Jeju:
     location: "협재 해수욕장 & 한림공원"
     activity: "Morning: 협재 해수욕장 및 비양도 조망 (무료), Afternoon: 한림공원 용암동굴 및 야자수길 (₩10,000), Evening: 애월 해안도로 - 테우 갈치조림 (₩30,000)"
 
+Gyeongju:
+  day1:
+    location: "불국사 & 석굴암"
+    activity: "Morning: 불국사 관람 및 다보탑, 석가탑 (₩6,000), Afternoon: 석굴암 석불 및 산책 (₩5,000), Evening: 황남빵 본점 - 황남빵 시식 (₩10,000)"
+  day2:
+    location: "첨성대 & 대릉원"
+    activity: "Morning: 첨성대 동양 최고 천문대 (무료), Afternoon: 대릉원 고분군 및 천마총 (₩3,000), Evening: 경주 교동 쌈밥 - 쌈밥정식 (₩15,000)"
+  day3:
+    location: "안압지 & 동궁"
+    activity: "Morning: 동궁과 월지(안압지) 관람 (₩3,000), Afternoon: 경주박물관 및 성덕대왕신종 (무료), Evening: 황리단길 맛집 투어 (₩25,000)"
+
+Jeonju:
+  day1:
+    location: "전주 한옥마을"
+    activity: "Morning: 한옥마을 거리 및 경기전 (₩3,000), Afternoon: 오목대, 이목대 전망 (무료), Evening: 한옥마을 비빔밥 - 가족회관 비빔밥 (₩12,000)"
+  day2:
+    location: "전동성당 & 남부시장"
+    activity: "Morning: 전동성당 및 풍남문 (무료), Afternoon: 남부시장 청년몰 및 야시장 (₩15,000), Evening: 콩나물국밥 - 현대옥 (₩8,000)"
+  day3:
+    location: "덕진공원 & 한지산업지원센터"
+    activity: "Morning: 덕진공원 연꽃 산책 (무료), Afternoon: 한지박물관 및 체험 (₩5,000), Evening: 전주 막걸리 거리 (₩20,000)"
+
+Sokcho:
+  day1:
+    location: "속초해수욕장 & 동명항"
+    activity: "Morning: 속초해변 산책 (무료), Afternoon: 동명항 활어회 센터 (₩40,000), Evening: 속초 중앙시장 닭강정, 순대 (₩15,000)"
+  day2:
+    location: "설악산 신흥사"
+    activity: "Morning: 신흥사 및 흔들바위 등반 (₩3,500), Afternoon: 권금성 케이블카 (₩11,000), Evening: 설악산 막국수 - 장수막국수 (₩9,000)"
+  day3:
+    location: "아바이마을 & 영금정"
+    activity: "Morning: 갯배 타고 아바이마을 순대 (₩10,000), Afternoon: 영금정 해안 절벽 산책 (무료), Evening: 등대해변 야경 (₩8,000)"
+
+Gangneung:
+  day1:
+    location: "경포대 & 경포해변"
+    activity: "Morning: 경포대 정자 및 경포호 (무료), Afternoon: 경포해변 산책 및 카페거리 (₩12,000), Evening: 초당순두부 - 초당순두부마을 (₩10,000)"
+  day2:
+    location: "안목해변 커피거리"
+    activity: "Morning: 안목해변 커피거리 투어 (₩8,000), Afternoon: 강릉커피박물관 (₩5,000), Evening: 강릉 중앙시장 - 왕산감자빵, 명태식해 (₩15,000)"
+  day3:
+    location: "오죽헌 & 선교장"
+    activity: "Morning: 오죽헌 신사임당 유적 (₩3,000), Afternoon: 선교장 전통가옥 (₩5,000), Evening: 강문해변 물회 - 강문물회 (₩18,000)"
+
 # Add more cities as needed
 # This file can be edited without changing code
 
