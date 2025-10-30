@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, APP_CONFIG } from '@/constants/config';
+import { secureStorage } from '@/utils/secureStorage';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -26,13 +26,13 @@ class ApiClient {
     // Request interceptor - Add auth token
     this.client.interceptors.request.use(
       async (config: InternalAxiosRequestConfig) => {
-        const token = await AsyncStorage.getItem('accessToken');
-        const userId = await AsyncStorage.getItem('userId');
+        const token = await secureStorage.getAccessToken();
+        const userId = await secureStorage.getUserId();
 
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-        
+
         if (userId) {
           config.headers['X-User-Id'] = userId;
         }
@@ -80,7 +80,7 @@ class ApiClient {
           this.isRefreshing = true;
 
           try {
-            const refreshToken = await AsyncStorage.getItem('refreshToken');
+            const refreshToken = await secureStorage.getRefreshToken();
             if (!refreshToken) {
               throw new Error('No refresh token available');
             }
@@ -90,11 +90,14 @@ class ApiClient {
               refreshToken,
             });
 
-            const { accessToken, userId } = response.data;
+            const { accessToken, refreshToken: newRefreshToken, userId } = response.data;
 
-            // Store new token
-            await AsyncStorage.setItem('accessToken', accessToken);
-            await AsyncStorage.setItem('userId', String(userId));
+            // Store new tokens securely
+            await secureStorage.setAuthData({
+              accessToken,
+              refreshToken: newRefreshToken,
+              userId: String(userId),
+            });
 
             // Retry all failed requests
             this.failedQueue.forEach(promise => promise.resolve());
@@ -107,8 +110,8 @@ class ApiClient {
             this.failedQueue.forEach(promise => promise.reject(refreshError));
             this.failedQueue = [];
 
-            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userId']);
-            
+            await secureStorage.clearAll();
+
             throw refreshError;
           } finally {
             this.isRefreshing = false;

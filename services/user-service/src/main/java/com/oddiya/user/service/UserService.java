@@ -1,5 +1,6 @@
 package com.oddiya.user.service;
 
+import com.oddiya.user.dto.CreateEmailUserRequest;
 import com.oddiya.user.dto.CreateUserRequest;
 import com.oddiya.user.dto.UpdateUserRequest;
 import com.oddiya.user.dto.UserResponse;
@@ -75,6 +76,33 @@ public class UserService {
 
     public Optional<UserResponse> findByProviderAndProviderId(String provider, String providerId) {
         return userRepository.findByProviderAndProviderId(provider, providerId)
+                .map(UserResponse::fromEntity);
+    }
+
+    // Internal API - called by Auth Service for email/password signup
+    @Transactional
+    public UserResponse createUserWithEmail(CreateEmailUserRequest request) {
+        // Check if email already exists
+        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
+        if (existingUser.isPresent()) {
+            throw new RuntimeException("User with email " + request.getEmail() + " already exists");
+        }
+
+        // Create new user with password hash
+        User newUser = new User();
+        newUser.setEmail(request.getEmail());
+        newUser.setName(request.getName());
+        newUser.setProvider(request.getProvider());
+        newUser.setProviderId(request.getEmail());  // For email auth, providerId = email
+        newUser.setPasswordHash(request.getPasswordHash());
+
+        User savedUser = userRepository.save(newUser);
+        return UserResponse.fromEntity(savedUser);
+    }
+
+    // Internal API - called by Auth Service for email/password login
+    public Optional<UserResponse> findUserByEmail(String email) {
+        return userRepository.findByEmail(email)
                 .map(UserResponse::fromEntity);
     }
 }

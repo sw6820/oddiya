@@ -17,6 +17,7 @@ public class UserResponse {
     private String email;
     private String name;
     private String provider;
+    private String passwordHash;  // Only populated for internal API calls
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -26,6 +27,7 @@ public class UserResponse {
                 .email(user.getEmail())
                 .name(user.getName())
                 .provider(user.getProvider())
+                .passwordHash(user.getPasswordHash())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

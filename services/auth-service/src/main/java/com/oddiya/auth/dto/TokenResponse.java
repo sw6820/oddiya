@@ -14,5 +14,6 @@ public class TokenResponse {
     private String refreshToken;
     private String tokenType = "Bearer";
     private long expiresIn;
+    private Long userId;  // For mobile app
 }
 

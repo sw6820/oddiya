@@ -30,6 +30,7 @@ public class SimpleMobileController {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #f5f5f5;
             padding: 16px;
+            min-height: 100vh;
         }
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -42,7 +43,7 @@ public class SimpleMobileController {
         .card {
             background: white;
             border-radius: 12px;
-            padding: 16px;
+            padding: 20px;
             margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
@@ -59,6 +60,12 @@ public class SimpleMobileController {
             cursor: pointer;
         }
         .button:active { background: #5568d3; }
+        .button-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        .button-secondary:active { background: #f0f0f0; }
         .input {
             width: 100%;
             padding: 12px;
@@ -82,6 +89,72 @@ public class SimpleMobileController {
             color: white;
             background: #4CAF50;
         }
+        .hidden { display: none; }
+        .error {
+            color: #d32f2f;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .success {
+            color: #4CAF50;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .text-center { text-align: center; }
+        .link-button {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 14px;
+            padding: 8px;
+        }
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 60vh;
+        }
+        .feature-list {
+            list-style: none;
+            margin: 20px 0;
+        }
+        .feature-list li {
+            padding: 12px 0;
+            color: #666;
+        }
+        .user-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .oauth-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 16px;
+        }
+        .oauth-button.google {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        .oauth-button.google:active {
+            background: #f5f5f5;
+        }
+        .oauth-button.apple {
+            background: #000;
+            color: white;
+        }
+        .oauth-button.apple:active {
+            background: #333;
+        }
     </style>
 </head>
 <body>
@@ -90,10 +163,46 @@ public class SimpleMobileController {
         <p>AI 여행 플래너</p>
     </div>
 
-    <div id="app">
+    <!-- Welcome Screen with OAuth -->
+    <div id="welcomeScreen" class="hidden">
+        <div class="welcome-screen">
+            <div class="card">
+                <h2 class="text-center">환영합니다! 🎉</h2>
+                <ul class="feature-list">
+                    <li>🤖 AI가 맞춤 여행 계획을 생성해드려요</li>
+                    <li>📸 여행 사진을 업로드하고 관리하세요</li>
+                    <li>🎬 추억을 영상으로 만들어드려요</li>
+                </ul>
+
+                <div style="margin-top: 24px;">
+                    <button class="button oauth-button google" onclick="loginWithGoogle()">
+                        <span style="font-size: 20px;">🔵</span> Google로 시작하기
+                    </button>
+                    <button class="button oauth-button apple" onclick="loginWithApple()">
+                        <span style="font-size: 20px;">🍎</span> Apple로 시작하기
+                    </button>
+                </div>
+
+                <p class="text-center" style="margin-top: 16px; color: #999; font-size: 14px;">
+                    로그인하면 <a href="#" style="color: #667eea;">이용약관</a> 및 <a href="#" style="color: #667eea;">개인정보처리방침</a>에 동의하게 됩니다
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Planning Screen (Authenticated) -->
+    <div id="planningScreen" class="hidden">
+        <div class="user-info">
+            <div>
+                <strong id="userName">사용자</strong>
+                <br><small id="userEmail" style="color: #666;"></small>
+            </div>
+            <button class="button" onclick="handleLogout()" style="width: auto; padding: 8px 16px; margin: 0; font-size: 14px;">로그아웃</button>
+        </div>
+
         <div class="card">
             <h2>여행 계획 만들기</h2>
-            
+
             <label class="label">여행지</label>
             <input type="text" id="location" class="input" placeholder="예: 서울, 부산, 제주, 경주, 전주">
             
@@ -114,27 +223,154 @@ public class SimpleMobileController {
 
     <script>
         const API = window.location.origin;
-        const USER_ID = 1;
+        const AUTH_API = 'http://localhost:8081'; // Auth Service
 
-        // 페이지 로드 시 계획 목록
-        window.onload = function() {
-            loadPlans();
-            
+        let currentUser = null;
+        let accessToken = null;
+
+        // 페이지 로드 시 인증 확인
+        window.onload = async function() {
+            // OAuth 콜백 확인 (URL에 code가 있으면 콜백 처리)
+            const isOAuthCallback = await handleOAuthCallback();
+
+            if (!isOAuthCallback) {
+                // 일반 페이지 로드 - 인증 확인
+                checkAuth();
+            }
+
             // 내일과 3일 후로 기본 날짜 설정
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             document.getElementById('startDate').value = tomorrow.toISOString().split('T')[0];
-            
+
             const after3days = new Date();
             after3days.setDate(after3days.getDate() + 4);
             document.getElementById('endDate').value = after3days.toISOString().split('T')[0];
         };
 
+        // 화면 전환 함수
+        function hideAllScreens() {
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('planningScreen').classList.add('hidden');
+        }
+
+        function showWelcome() {
+            hideAllScreens();
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+        }
+
+        function showPlanning() {
+            hideAllScreens();
+            document.getElementById('planningScreen').classList.remove('hidden');
+            loadPlans();
+        }
+
+        // 인증 확인
+        function checkAuth() {
+            const token = localStorage.getItem('accessToken');
+            const userId = localStorage.getItem('userId');
+            const userName = localStorage.getItem('userName');
+            const userEmail = localStorage.getItem('userEmail');
+
+            if (token && userId) {
+                accessToken = token;
+                currentUser = { id: userId, name: userName, email: userEmail };
+                document.getElementById('userName').textContent = userName || '사용자';
+                document.getElementById('userEmail').textContent = userEmail || '';
+                showPlanning();
+            } else {
+                showWelcome();
+            }
+        }
+
+        // OAuth 로그인 - Google
+        function loginWithGoogle() {
+            // 현재 URL을 상태에 저장하여 콜백 후 복귀
+            localStorage.setItem('oauth_return_url', window.location.href);
+
+            // Google OAuth 흐름 시작
+            window.location.href = AUTH_API + '/oauth2/authorize/google';
+        }
+
+        // OAuth 로그인 - Apple
+        function loginWithApple() {
+            alert('🍎 Apple 로그인은 곧 제공될 예정입니다!\\n현재는 Google 로그인을 이용해주세요.');
+        }
+
+        // OAuth 콜백 처리
+        async function handleOAuthCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+
+            if (!code) {
+                return false; // 콜백이 아님
+            }
+
+            try {
+                // Auth 서비스에 code 전송하여 토큰 받기
+                const response = await fetch(AUTH_API + '/api/auth/oauth2/callback/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, state })
+                });
+
+                if (!response.ok) {
+                    throw new Error('OAuth 인증에 실패했습니다');
+                }
+
+                const data = await response.json();
+
+                // 사용자 정보 가져오기
+                const userResponse = await fetch(API + '/api/v1/users/me', {
+                    headers: { 'X-User-Id': data.userId }
+                });
+                const userData = await userResponse.json();
+
+                // 토큰 저장
+                localStorage.setItem('accessToken', data.accessToken);
+                localStorage.setItem('refreshToken', data.refreshToken);
+                localStorage.setItem('userId', data.userId);
+                localStorage.setItem('userName', userData.name);
+                localStorage.setItem('userEmail', userData.email);
+
+                alert('✅ 로그인 성공!');
+
+                // URL에서 code/state 파라미터 제거
+                window.history.replaceState({}, document.title, window.location.pathname);
+
+                checkAuth();
+                return true;
+
+            } catch (error) {
+                alert('❌ 로그인 실패: ' + error.message);
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showWelcome();
+                return false;
+            }
+        }
+
+        // 로그아웃
+        function handleLogout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userEmail');
+                accessToken = null;
+                currentUser = null;
+                showWelcome();
+            }
+        }
+
         // 계획 목록 로드
         async function loadPlans() {
+            if (!currentUser) return;
+
             try {
                 const response = await fetch(API + '/api/plans', {
-                    headers: {'X-User-Id': USER_ID}
+                    headers: {'X-User-Id': currentUser.id}
                 });
                 const plans = await response.json();
                 
@@ -177,7 +413,7 @@ public class SimpleMobileController {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-User-Id': USER_ID
+                        'X-User-Id': currentUser.id
                     },
                     body: JSON.stringify({title: finalTitle, startDate, endDate})
                 });
@@ -204,7 +440,7 @@ public class SimpleMobileController {
             
             try {
                 const response = await fetch(API + '/api/plans/' + id, {
-                    headers: {'X-User-Id': USER_ID}
+                    headers: {'X-User-Id': currentUser.id}
                 });
                 const plan = await response.json();
 
@@ -245,7 +481,7 @@ public class SimpleMobileController {
                 
                 // 기존 업로드된 사진 표시
                 const photosResponse = await fetch(API + '/api/plans/' + id + '/photos', {
-                    headers: {'X-User-Id': USER_ID}
+                    headers: {'X-User-Id': currentUser.id}
                 });
                 const existingPhotos = await photosResponse.json();
                 
@@ -330,11 +566,11 @@ public class SimpleMobileController {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-User-Id': USER_ID
+                            'X-User-Id': currentUser.id
                         },
                         body: JSON.stringify({
                             photoUrl: photoUrl,
-                            s3Key: 'photos/user' + USER_ID + '/plan' + currentPlanId + '/photo' + i + '.jpg',
+                            s3Key: 'photos/user' + currentUser.id + '/plan' + currentPlanId + '/photo' + i + '.jpg',
                             order: i + 1
                         })
                     });
@@ -361,7 +597,7 @@ public class SimpleMobileController {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-User-Id': USER_ID,
+                        'X-User-Id': currentUser.id,
                         'Idempotency-Key': crypto.randomUUID()
                     },
                     body: JSON.stringify({template: 'default'})
@@ -384,7 +620,7 @@ public class SimpleMobileController {
             const interval = setInterval(async () => {
                 try {
                     const response = await fetch(API + '/api/videos/' + videoId, {
-                        headers: {'X-User-Id': USER_ID}
+                        headers: {'X-User-Id': currentUser.id}
                     });
                     const video = await response.json();
                     

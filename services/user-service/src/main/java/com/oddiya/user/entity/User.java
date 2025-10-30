@@ -29,6 +29,9 @@ public class User {
     @Column(nullable = false)
     private String providerId;
 
+    @Column(nullable = true)  // Nullable for OAuth users who don't have passwords
+    private String passwordHash;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

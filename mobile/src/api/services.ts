@@ -12,6 +12,14 @@ import {
 
 // Auth Service
 export const authService = {
+  async loginWithEmail(email: string, password: string): Promise<TokenResponse> {
+    return apiClient.post(API_ENDPOINTS.LOGIN, { email, password });
+  },
+
+  async signupWithEmail(name: string, email: string, password: string): Promise<TokenResponse> {
+    return apiClient.post(API_ENDPOINTS.SIGNUP, { name, email, password });
+  },
+
   async oauthCallback(provider: string, code: string): Promise<TokenResponse> {
     return apiClient.post(`${API_ENDPOINTS.OAUTH_CALLBACK}/${provider}`, { code });
   },

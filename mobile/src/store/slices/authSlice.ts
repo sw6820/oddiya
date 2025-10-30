@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService, userService } from '@/api/services';
 import { AuthState, TokenResponse, User } from '@/types';
+import { secureStorage } from '@/utils/secureStorage';
 
 const initialState: AuthState = {
   user: null,
@@ -13,46 +13,98 @@ const initialState: AuthState = {
 };
 
 // Async Thunks
-export const loginWithOAuth = createAsyncThunk(
-  'auth/loginWithOAuth',
-  async ({ provider, code }: { provider: string; code: string }) => {
-    const tokenResponse = await authService.oauthCallback(provider, code);
-    
-    // Store tokens
-    await AsyncStorage.multiSet([
-      ['accessToken', tokenResponse.accessToken],
-      ['refreshToken', tokenResponse.refreshToken],
-      ['userId', String(tokenResponse.userId)],
-    ]);
-    
+
+// Email/Password Login
+export const loginWithEmail = createAsyncThunk(
+  'auth/loginWithEmail',
+  async ({ email, password }: { email: string; password: string }) => {
+    const tokenResponse = await authService.loginWithEmail(email, password);
+
+    // Store tokens securely
+    await secureStorage.setAuthData({
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+      userId: String(tokenResponse.userId),
+      email,
+    });
+
     // Fetch user profile
     const user = await userService.getProfile();
-    
+
     return { tokenResponse, user };
   },
 );
 
+// Email/Password Signup
+export const signupWithEmail = createAsyncThunk(
+  'auth/signupWithEmail',
+  async ({ name, email, password }: { name: string; email: string; password: string }) => {
+    const tokenResponse = await authService.signupWithEmail(name, email, password);
+
+    // Store tokens securely
+    await secureStorage.setAuthData({
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+      userId: String(tokenResponse.userId),
+      email,
+    });
+
+    // Fetch user profile
+    const user = await userService.getProfile();
+
+    return { tokenResponse, user };
+  },
+);
+
+// Google OAuth Login
+export const loginWithGoogle = createAsyncThunk(
+  'auth/loginWithGoogle',
+  async () => {
+    // TODO: Implement Google OAuth flow with expo-auth-session
+    // For now, throw error with instructions
+    throw new Error('Google login will be implemented in next update');
+  },
+);
+
+// OAuth Callback (for deep linking)
+export const loginWithOAuth = createAsyncThunk(
+  'auth/loginWithOAuth',
+  async ({ provider, code }: { provider: string; code: string }) => {
+    const tokenResponse = await authService.oauthCallback(provider, code);
+
+    // Store tokens securely
+    await secureStorage.setAuthData({
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+      userId: String(tokenResponse.userId),
+    });
+
+    // Fetch user profile
+    const user = await userService.getProfile();
+
+    return { tokenResponse, user };
+  },
+);
+
+// Refresh Token
 export const refreshAuthToken = createAsyncThunk(
   'auth/refreshToken',
   async (refreshToken: string) => {
     const tokenResponse = await authService.refreshToken(refreshToken);
-    
-    await AsyncStorage.multiSet([
-      ['accessToken', tokenResponse.accessToken],
-      ['refreshToken', tokenResponse.refreshToken],
-      ['userId', String(tokenResponse.userId)],
-    ]);
-    
+
+    await secureStorage.setAuthData({
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+      userId: String(tokenResponse.userId),
+    });
+
     return tokenResponse;
   },
 );
 
+// Load Stored Authentication
 export const loadStoredAuth = createAsyncThunk('auth/loadStored', async () => {
-  const [[, accessToken], [, refreshToken], [, userId]] = await AsyncStorage.multiGet([
-    'accessToken',
-    'refreshToken',
-    'userId',
-  ]);
+  const { accessToken, refreshToken, userId } = await secureStorage.getAuthData();
 
   if (!accessToken || !userId) {
     throw new Error('No stored authentication');
@@ -68,8 +120,9 @@ export const loadStoredAuth = createAsyncThunk('auth/loadStored', async () => {
   };
 });
 
+// Logout
 export const logout = createAsyncThunk('auth/logout', async () => {
-  await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userId']);
+  await secureStorage.clearAll();
 });
 
 // Slice
@@ -82,7 +135,61 @@ const authSlice = createSlice({
     },
   },
   extraReducers: builder => {
-    // Login
+    // Email Login
+    builder
+      .addCase(loginWithEmail.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginWithEmail.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.tokenResponse.accessToken;
+        state.refreshToken = action.payload.tokenResponse.refreshToken;
+        state.isAuthenticated = true;
+      })
+      .addCase(loginWithEmail.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Login failed';
+      });
+
+    // Email Signup
+    builder
+      .addCase(signupWithEmail.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signupWithEmail.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.tokenResponse.accessToken;
+        state.refreshToken = action.payload.tokenResponse.refreshToken;
+        state.isAuthenticated = true;
+      })
+      .addCase(signupWithEmail.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Signup failed';
+      });
+
+    // Google Login
+    builder
+      .addCase(loginWithGoogle.pending, state => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginWithGoogle.fulfilled, (state, action: any) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.tokenResponse.accessToken;
+        state.refreshToken = action.payload.tokenResponse.refreshToken;
+        state.isAuthenticated = true;
+      })
+      .addCase(loginWithGoogle.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Google login failed';
+      });
+
+    // OAuth Callback
     builder
       .addCase(loginWithOAuth.pending, state => {
         state.isLoading = true;
@@ -97,10 +204,10 @@ const authSlice = createSlice({
       })
       .addCase(loginWithOAuth.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.error.message || 'Login failed';
+        state.error = action.error.message || 'OAuth login failed';
       });
 
-    // Load stored
+    // Load stored auth
     builder
       .addCase(loadStoredAuth.pending, state => {
         state.isLoading = true;

@@ -20,7 +20,7 @@ spring:
       hibernate:
         default_schema: user_service
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update  # Changed from validate to allow schema updates in development
     show-sql: false
 
 management:

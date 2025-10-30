@@ -109,3 +109,4 @@ test-results/*.html
 test-results/load/
 !test-results/.gitkeep
 .env.bedrock
+.env.oauth

@@ -29,20 +29,22 @@ export const BASE_URL = getBaseURL();
 
 export const API_ENDPOINTS = {
   // Auth
+  LOGIN: '/api/auth/login',
+  SIGNUP: '/api/auth/signup',
   OAUTH_CALLBACK: '/api/auth/oauth2/callback',
   REFRESH_TOKEN: '/api/auth/refresh',
-  
+
   // User
   USER_PROFILE: '/api/users/me',
-  
+
   // Plans
   PLANS: '/api/plans',
   PLAN_BY_ID: (id: number) => `/api/plans/${id}`,
-  
+
   // Videos
   VIDEOS: '/api/videos',
   VIDEO_BY_ID: (id: number) => `/api/videos/${id}`,
-  
+
   // Health
   HEALTH: '/actuator/health',
   OVERVIEW: '/api/overview',

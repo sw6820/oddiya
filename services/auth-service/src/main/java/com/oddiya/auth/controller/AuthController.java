@@ -1,8 +1,6 @@
 package com.oddiya.auth.controller;
 
-import com.oddiya.auth.dto.OAuthCallbackRequest;
-import com.oddiya.auth.dto.RefreshTokenRequest;
-import com.oddiya.auth.dto.TokenResponse;
+import com.oddiya.auth.dto.*;
 import com.oddiya.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,19 +12,57 @@ import java.net.URI;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/oauth2")
 @RequiredArgsConstructor
 public class AuthController {
-    
+
     private final AuthService authService;
-    
-    @Value("${spring.security.oauth2.client.registration.google.redirect-uri}")
+
+    @Value("${spring.security.oauth2.client.registration.google.redirect-uri:http://localhost:8080/oauth2/callback/google}")
     private String redirectUri;
+
+    // ============================================================================
+    // Email/Password Authentication (for Mobile App)
+    // ============================================================================
+
+    /**
+     * Email/Password Signup
+     * POST /api/auth/signup
+     */
+    @PostMapping("/api/auth/signup")
+    public ResponseEntity<TokenResponse> signup(@Valid @RequestBody SignupRequest request) {
+        TokenResponse tokens = authService.signup(request);
+        return ResponseEntity.ok(tokens);
+    }
+
+    /**
+     * Email/Password Login
+     * POST /api/auth/login
+     */
+    @PostMapping("/api/auth/login")
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        TokenResponse tokens = authService.login(request);
+        return ResponseEntity.ok(tokens);
+    }
+
+    /**
+     * Refresh Access Token
+     * POST /api/auth/refresh
+     */
+    @PostMapping("/api/auth/refresh")
+    public ResponseEntity<TokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        TokenResponse tokens = authService.refreshToken(request.getRefreshToken());
+        return ResponseEntity.ok(tokens);
+    }
+
+    // ============================================================================
+    // OAuth 2.0 Authentication (Google)
+    // ============================================================================
     
     /**
      * Initiate OAuth flow - redirects to Google OAuth
+     * GET /oauth2/authorize/google
      */
-    @GetMapping("/authorize/google")
+    @GetMapping("/oauth2/authorize/google")
     public ResponseEntity<Void> authorizeGoogle() {
         String state = UUID.randomUUID().toString();
         // Store state in session or Redis for CSRF protection
@@ -39,27 +75,20 @@ public class AuthController {
         );
         return ResponseEntity.status(302).location(URI.create(googleAuthUrl)).build();
     }
-    
+
     /**
      * Handle OAuth callback and generate tokens
+     * POST /api/auth/oauth2/callback/google
      */
-    @PostMapping("/callback/google")
+    @PostMapping("/api/auth/oauth2/callback/google")
     public ResponseEntity<TokenResponse> callbackGoogle(@Valid @RequestBody OAuthCallbackRequest request) {
         TokenResponse tokens = authService.handleOAuthCallback("google", request.getCode(), request.getState());
         return ResponseEntity.ok(tokens);
     }
-    
-    /**
-     * Refresh access token using refresh token
-     */
-    @PostMapping("/token")
-    public ResponseEntity<TokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        TokenResponse tokens = authService.refreshToken(request.getRefreshToken());
-        return ResponseEntity.ok(tokens);
-    }
-    
+
     /**
      * JWKS endpoint for public key (RS256)
+     * GET /.well-known/jwks.json
      */
     @GetMapping("/.well-known/jwks.json")
     public ResponseEntity<String> getJwks() {

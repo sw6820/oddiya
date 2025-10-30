@@ -6,6 +6,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -19,12 +21,23 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/oauth2/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()  // Mobile app auth endpoints
+                .requestMatchers("/oauth2/**").permitAll()     // OAuth endpoints
+                .requestMatchers("/actuator/**").permitAll()   // Health check
+                .requestMatchers("/.well-known/**").permitAll() // JWKS endpoint
                 .anyRequest().authenticated()
             );
 
         return http.build();
+    }
+
+    /**
+     * Password encoder bean for hashing and verifying passwords
+     * Uses BCrypt with strength 10
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(10);
     }
 }
 
