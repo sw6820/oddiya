@@ -2,10 +2,11 @@ package com.oddiya.plan.service;
 
 import com.oddiya.plan.dto.*;
 import com.oddiya.plan.entity.PlanDetail;
-import com.oddiya.plan.entity.PlanPhoto;
 import com.oddiya.plan.entity.TravelPlan;
+import com.oddiya.plan.exception.LlmServiceException;
 import com.oddiya.plan.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
@@ -13,24 +14,33 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlanService {
     private final TravelPlanRepository planRepository;
     private final LlmAgentClient llmAgentClient;
-    private final DefaultActivityLoader activityLoader;
 
     @Transactional
     public Mono<PlanResponse> createPlan(Long userId, CreatePlanRequest request) {
-        // Create LLM request with enhanced data
+        log.info("[PlanService] Creating plan for user={}, title='{}', dates={} to {}",
+            userId, request.getTitle(), request.getStartDate(), request.getEndDate());
+
+        // LLM-Only Architecture: No fallback to hardcoded data
         LlmRequest llmRequest = new LlmRequest();
         llmRequest.setTitle(request.getTitle());
         llmRequest.setStartDate(request.getStartDate().toString());
         llmRequest.setEndDate(request.getEndDate().toString());
         llmRequest.setBudget("medium");  // Default budget
-        llmRequest.setLocation(extractLocation(request.getTitle()));  // Extract from title
+        llmRequest.setLocation(extractLocationFromTitle(request.getTitle()));
+
+        log.debug("[PlanService] Calling LLM Agent with location={}, budget={}",
+            llmRequest.getLocation(), llmRequest.getBudget());
 
         return llmAgentClient.generatePlan(llmRequest)
+                .doOnSuccess(response ->
+                    log.debug("[PlanService] LLM Agent returned plan with {} days",
+                        response.getDays() != null ? response.getDays().size() : 0))
                 .map(llmResponse -> {
                     TravelPlan plan = new TravelPlan();
                     plan.setUserId(userId);
@@ -53,154 +63,56 @@ public class PlanService {
                     }
 
                     TravelPlan savedPlan = planRepository.save(plan);
+                    log.info("[PlanService] Plan created successfully: id={}, userId={}, days={}",
+                        savedPlan.getId(), userId, savedPlan.getDetails().size());
                     return PlanResponse.fromEntity(savedPlan);
                 })
                 .onErrorResume(error -> {
-                    // Fallback: create realistic plan if LLM fails
-                    String location = extractLocation(request.getTitle());
-                    
-                    TravelPlan plan = new TravelPlan();
-                    plan.setUserId(userId);
-                    plan.setTitle(request.getTitle());
-                    plan.setStartDate(request.getStartDate());
-                    plan.setEndDate(request.getEndDate());
-                    
-                    // Generate better default activities based on location
-                    List<PlanDetail> details = generateDefaultActivities(location, plan);
-                    plan.setDetails(details);
-                    
-                    TravelPlan savedPlan = planRepository.save(plan);
-                    return Mono.just(PlanResponse.fromEntity(savedPlan));
+                    // LLM-Only: Return meaningful error instead of fake data
+                    log.error("[PlanService] LLM Agent failed for user {}: {}", userId, error.getMessage(), error);
+                    return Mono.error(new LlmServiceException(
+                        "LLM Agent failed to generate travel plan", error
+                    ));
                 });
     }
-    
-    private String extractLocation(String title) {
-        // Extract location from title - flexible matching
-        String lowerTitle = title.toLowerCase();
-        
-        // Try to match city names (both Korean and English)
-        if (title.contains("서울") || lowerTitle.contains("seoul")) return "Seoul";
-        if (title.contains("부산") || lowerTitle.contains("busan")) return "Busan";
-        if (title.contains("제주") || lowerTitle.contains("jeju")) return "Jeju";
-        if (title.contains("경주") || lowerTitle.contains("gyeongju")) return "Gyeongju";
-        if (title.contains("전주") || lowerTitle.contains("jeonju")) return "Jeonju";
-        if (title.contains("속초") || lowerTitle.contains("sokcho")) return "Sokcho";
-        if (title.contains("강릉") || lowerTitle.contains("gangneung")) return "Gangneung";
-        if (title.contains("진주") || lowerTitle.contains("jinju")) return "Jinju";
-        if (title.contains("여수") || lowerTitle.contains("yeosu")) return "Yeosu";
-        if (title.contains("대구") || lowerTitle.contains("daegu")) return "Daegu";
-        if (title.contains("광주") || lowerTitle.contains("gwangju")) return "Gwangju";
-        if (title.contains("인천") || lowerTitle.contains("incheon")) return "Incheon";
-        if (title.contains("춘천") || lowerTitle.contains("chuncheon")) return "Chuncheon";
-        
-        // First word as location (for cases like "Gyeongju 여행")
+
+    /**
+     * Extract location from title for LLM context.
+     * This is just for passing to LLM - Claude will handle all location-specific data.
+     */
+    private String extractLocationFromTitle(String title) {
+        // Simple extraction: first word is usually the location
         String[] words = title.split(" ");
         if (words.length > 0) {
-            String firstWord = words[0];
-            // Capitalize first letter for matching YAML keys
-            if (firstWord.length() > 0) {
-                return firstWord.substring(0, 1).toUpperCase() + firstWord.substring(1);
-            }
+            return words[0].trim();
         }
-        
-        return "Seoul";  // Fallback
-    }
-    
-    private List<PlanDetail> generateDefaultActivities(String location, TravelPlan plan) {
-        // Generate realistic default activities by location
-        java.time.LocalDate start = plan.getStartDate();
-        java.time.LocalDate end = plan.getEndDate();
-        int numDays = (int) java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
-        
-        List<PlanDetail> details = new java.util.ArrayList<>();
-        
-        for (int day = 1; day <= numDays; day++) {
-            PlanDetail detail = new PlanDetail();
-            detail.setPlan(plan);
-            detail.setDay(day);
-            
-            if (location.equals("Seoul")) {
-                switch (day) {
-                    case 1:
-                        detail.setLocation("경복궁 & 북촌한옥마을");
-                        detail.setActivity("Morning: 경복궁 궁궐 투어 및 수문장 교대식 관람 (₩3,000), Afternoon: 북촌한옥마을 8경 투어 및 전통찻집 (₩15,000), Evening: 인사동 쌈지길 - 진진바라 족발보쌈 (₩30,000)");
-                        break;
-                    case 2:
-                        detail.setLocation("명동 & 남산");
-                        detail.setActivity("Morning: 명동 쇼핑 및 명동교자 칼국수 (₩15,000), Afternoon: 남산 케이블카 및 N서울타워 전망대 (₩21,000), Evening: 한강 반포한강공원 달빛무지개분수 (₩20,000)");
-                        break;
-                    case 3:
-                        detail.setLocation("홍대 & 이태원");
-                        detail.setActivity("Morning: 홍대 거리 공연 및 플리마켓 (₩20,000), Afternoon: 이태원 앤틱가구거리 및 경리단길 (₩25,000), Evening: 이태원 세븐스프링스 삼겹살 (₩35,000)");
-                        break;
-                    default:
-                        detail.setLocation("서울 도심 탐방");
-                        detail.setActivity("Morning: 전통시장 구경 (₩20,000), Afternoon: 카페거리 탐방 (₩15,000), Evening: 야경 명소 방문 (₩25,000)");
-                        break;
-                }
-            } else if (location.equals("Busan")) {
-                switch (day) {
-                    case 1:
-                        detail.setLocation("해운대 해수욕장 & 동백섬");
-                        detail.setActivity("Morning: 해운대 해변 산책 및 더베이101 전망대 (₩5,000), Afternoon: 동백섬 누리마루 APEC하우스 (무료), Evening: 민락동 회센터 - 활어회 정식 (₩40,000)");
-                        break;
-                    case 2:
-                        detail.setLocation("감천문화마을 & 송도");
-                        detail.setActivity("Morning: 감천문화마을 골목길 투어 및 하늘전망대 (무료), Afternoon: 송도 해상케이블카 및 암남공원 (₩15,000), Evening: 광안리 해변 - 광안리 해변 돼지국밥 (₩30,000)");
-                        break;
-                    case 3:
-                        detail.setLocation("태종대 & 용두산공원");
-                        detail.setActivity("Morning: 태종대 유람선 투어 (₩8,000), Afternoon: 용두산공원 부산타워 및 광복동 쇼핑 (₩15,000), Evening: 국제시장 - 비빔당면 및 씨앗호떡 (₩20,000)");
-                        break;
-                    default:
-                        detail.setLocation("부산 해안 투어");
-                        detail.setActivity("Morning: 해변 산책 (무료), Afternoon: 해산물 시장 구경 (₩20,000), Evening: 야경 명소 (₩25,000)");
-                        break;
-                }
-            } else if (location.equals("Jeju")) {
-                switch (day) {
-                    case 1:
-                        detail.setLocation("성산일출봉 & 우도");
-                        detail.setActivity("Morning: 성산일출봉 등반 및 일출 감상 (₩5,000), Afternoon: 우도 해상 관광 및 땅콩 아이스크림 (₩15,000), Evening: 돔베고기 정식 - 올레국수 본점 (₩35,000)");
-                        break;
-                    case 2:
-                        detail.setLocation("한라산 어리목 코스 & 제주민속촌");
-                        detail.setActivity("Morning: 한라산 어리목 코스 트레킹 (무료), Afternoon: 제주민속촌 전통 가옥 관람 (₩11,000), Evening: 해녀의 집 - 성게비빔밥 (₩40,000)");
-                        break;
-                    case 3:
-                        detail.setLocation("협재 해수욕장 & 한림공원");
-                        detail.setActivity("Morning: 협재 해수욕장 및 비양도 조망 (무료), Afternoon: 한림공원 용암동굴 및 야자수길 (₩10,000), Evening: 애월 해안도로 - 테우 갈치조림 (₩30,000)");
-                        break;
-                    default:
-                        detail.setLocation("제주 올레길 탐방");
-                        detail.setActivity("Morning: 올레길 7코스 걷기 (무료), Afternoon: 카멜리아힐 동백꽃 정원 (₩9,000), Evening: 동문재래시장 먹거리 탐방 (₩25,000)");
-                        break;
-                }
-            } else {
-                detail.setLocation(location + " 명소 탐방");
-                detail.setActivity("Morning: 주요 관광지 방문 (₩20,000), Afternoon: 현지 맛집 투어 (₩25,000), Evening: 야경 명소 (₩20,000)");
-            }
-            
-            details.add(detail);
-        }
-        
-        return details;
+        return title;  // Use full title if no spaces
     }
 
     public List<PlanResponse> getUserPlans(Long userId) {
-        return planRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+        log.debug("[PlanService] Fetching plans for user={}", userId);
+        List<PlanResponse> plans = planRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(PlanResponse::fromEntity)
                 .collect(Collectors.toList());
+        log.info("[PlanService] Retrieved {} plans for user={}", plans.size(), userId);
+        return plans;
     }
 
     public PlanResponse getPlan(Long planId, Long userId) {
+        log.debug("[PlanService] Fetching plan: id={}, userId={}", planId, userId);
         TravelPlan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+                .orElseThrow(() -> {
+                    log.warn("[PlanService] Plan not found: id={}", planId);
+                    return new RuntimeException("Plan not found");
+                });
 
         if (!plan.getUserId().equals(userId)) {
+            log.warn("[PlanService] Unauthorized access attempt: planId={}, userId={}, ownerId={}",
+                planId, userId, plan.getUserId());
             throw new RuntimeException("Unauthorized access to plan");
         }
 
+        log.info("[PlanService] Plan retrieved: id={}, userId={}", planId, userId);
         return PlanResponse.fromEntity(plan);
     }
 

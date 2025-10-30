@@ -9,6 +9,7 @@ from datetime import datetime
 import operator
 
 from langchain_aws import ChatBedrock
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 from langsmith import Client, traceable
@@ -60,19 +61,39 @@ class LangGraphPlanner:
     
     def __init__(self):
         self.mock_mode = os.getenv("MOCK_MODE", "true").lower() == "true"
-        
+        llm_provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
+
         if not self.mock_mode:
-            self.llm = ChatBedrock(
-                model_id=os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20241022-v2:0"),
-                region_name=os.getenv("AWS_REGION", "ap-northeast-2"),
-                model_kwargs={"temperature": 0.7, "max_tokens": 2048}
-            )
+            if llm_provider == "gemini":
+                # Use Google Gemini
+                api_key = os.getenv("GOOGLE_API_KEY")
+                if not api_key:
+                    logger.error("GOOGLE_API_KEY not set, falling back to mock mode")
+                    self.mock_mode = True
+                    self.llm = None
+                else:
+                    self.llm = ChatGoogleGenerativeAI(
+                        model=os.getenv("GEMINI_MODEL", "gemini-pro"),
+                        google_api_key=api_key,
+                        temperature=0.7,
+                        max_output_tokens=2048
+                    )
+                    logger.info(f"Initialized Gemini: {os.getenv('GEMINI_MODEL', 'gemini-pro')}")
+            else:
+                # Use AWS Bedrock (legacy)
+                self.llm = ChatBedrock(
+                    model_id=os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20241022-v2:0"),
+                    region_name=os.getenv("AWS_REGION", "ap-northeast-2"),
+                    model_kwargs={"temperature": 0.7, "max_tokens": 2048}
+                )
+                logger.info(f"Initialized Bedrock: {os.getenv('BEDROCK_MODEL_ID')}")
         else:
             self.llm = None  # Use mock responses
-        
+            logger.info("Mock mode enabled")
+
         self.weather_service = WeatherService()
         self.prompt_loader = get_prompt_loader()
-        
+
         # Build the planning graph
         self.graph = self._build_planning_graph()
     
@@ -130,14 +151,14 @@ class LangGraphPlanner:
         # Use weather data only (no Kakao API)
         state["weather_data"] = weather
         state["places_data"] = {}  # Claude has built-in Korea knowledge
-        
+
         # Load system message from prompt file
         system_msg = self.prompt_loader.get_system_message()
         state["messages"] = [
             SystemMessage(content=system_msg)
         ]
-        
-        logger.info(f"[LangGraph] Context gathered: {len(places)} places, weather: {weather.get('condition')}")
+
+        logger.info(f"[LangGraph] Context gathered - weather: {weather.get('description', 'N/A')}, temp: {weather.get('temperature', {}).get('current', 'N/A')}°C")
         return state
     
     @traceable(name="generate_draft")
@@ -155,6 +176,8 @@ class LangGraphPlanner:
             # Real LLM call
             messages = state["messages"] + [HumanMessage(content=prompt)]
             response = await self.llm.ainvoke(messages)
+            logger.info(f"[LLM Response] Length: {len(response.content)} chars")
+            logger.info(f"[LLM Response] Preview (first 500 chars): {response.content[:500]}")
             draft = self._parse_llm_response(response.content, state)
             state["messages"].append(AIMessage(content=response.content))
         
@@ -193,16 +216,13 @@ class LangGraphPlanner:
             if not has_indoor:
                 feedback.append("High chance of rain - add indoor activities")
         
-        # Check 4: Real places used
-        plan_has_real_places = any(
-            any(place["place_name"] in day.get("location", "")
-                for place in state["places_data"].get("attractions", []))
-            for day in draft.get("days", [])
-        )
-        
-        if not plan_has_real_places and state["current_iteration"] < 2:
-            feedback.append("Use more real places from Kakao API")
-        
+        # Check 4: Activity format (Morning/Afternoon/Evening)
+        for day in draft.get("days", []):
+            activity = day.get("activity", "")
+            if "Morning:" not in activity or "Afternoon:" not in activity or "Evening:" not in activity:
+                feedback.append(f"Day {day.get('day')} missing proper activity format (Morning/Afternoon/Evening)")
+                break  # Only report once
+
         state["feedback"] = feedback
         state["current_iteration"] += 1
         
@@ -260,13 +280,25 @@ class LangGraphPlanner:
         final_plan = state["plan_draft"]
         
         # Add metadata
+        llm_provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
+        if self.mock_mode:
+            model_name = "Mock"
+            architecture = "LangChain + LangGraph (Mock Mode)"
+        elif llm_provider == "gemini":
+            model_name = f"Google Gemini {os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')}"
+            architecture = "LangChain + LangGraph + Google Gemini"
+        else:
+            model_name = "Claude Sonnet 3.5"
+            architecture = "LangChain + LangGraph + AWS Bedrock"
+
         final_plan["metadata"] = {
             "generated_at": datetime.now().isoformat(),
             "iterations": state["current_iteration"],
             "location": state["location"],
             "budget": state["budget"],
-            "ai_model": "Claude Sonnet" if not self.mock_mode else "Mock",
-            "external_apis": ["OpenWeatherMap", "Kakao Local API"]
+            "ai_model": model_name,
+            "external_apis": ["OpenWeatherMap"],  # LLM-only for travel content
+            "architecture": architecture
         }
         
         state["final_plan"] = final_plan
@@ -307,17 +339,38 @@ class LangGraphPlanner:
         """Parse LLM response into structured plan"""
         import json
         import re
-        
+
         try:
-            # Try to extract JSON from response
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            # Try multiple parsing strategies
+
+            # Strategy 1: Extract from markdown code block
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group())
-            else:
-                # Fallback to mock if parsing fails
-                return self._generate_mock_draft(state)
+                logger.info("[Parser] Found JSON in markdown code block")
+                return json.loads(json_match.group(1))
+
+            # Strategy 2: Find JSON object (greedy)
+            json_match = re.search(r'\{(?:[^{}]|(?:\{[^{}]*\}))*\}', content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                logger.info(f"[Parser] Found JSON object, length: {len(json_str)}")
+                try:
+                    return json.loads(json_str)
+                except json.JSONDecodeError as je:
+                    # Try to fix common JSON issues
+                    logger.warning(f"[Parser] JSON decode error: {je}, attempting fixes")
+                    # Remove trailing commas
+                    json_str = re.sub(r',\s*}', '}', json_str)
+                    json_str = re.sub(r',\s*]', ']', json_str)
+                    return json.loads(json_str)
+
+            # Strategy 3: Use structured output hint
+            logger.warning("[Parser] No JSON found, requesting structured output")
+            # Fallback to mock if parsing fails
+            return self._generate_mock_draft(state)
         except Exception as e:
             logger.error(f"Failed to parse LLM response: {e}")
+            logger.error(f"Response preview (first 500 chars): {content[:500]}")
             return self._generate_mock_draft(state)
     
     def _generate_mock_draft(self, state: PlanState) -> Dict[str, Any]:
@@ -380,19 +433,7 @@ class LangGraphPlanner:
                 "📱 Download Kakao Map app for navigation"
             ]
         }
-    
-    async def validate_plan_node(self, state: PlanState) -> PlanState:
-        """Already defined above"""
-        return await self.validate_plan_node(state)
-    
-    async def refine_plan_node(self, state: PlanState) -> PlanState:
-        """Already defined above"""
-        return await self.refine_plan_node(state)
-    
-    async def finalize_plan_node(self, state: PlanState) -> PlanState:
-        """Already defined above"""
-        return await self.finalize_plan_node(state)
-    
+
     @traceable(name="generate_travel_plan")
     async def generate_plan(
         self,

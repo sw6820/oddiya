@@ -17,22 +17,22 @@ AI-powered mobile travel planner with automated short-form video generation. 8-w
 **NEVER hardcode in code:**
 - ❌ Travel destinations in switch/case statements
 - ❌ Prompts in Java/Python code
-- ❌ Restaurant names in if/else chains
+- ❌ Restaurant names in if/else chains or YAML files
 - ❌ UI messages inline
 - ❌ Configuration values
-- ❌ Business logic data
+- ❌ Business logic data (travel itineraries, activities, etc.)
 
-**ALWAYS use configuration:**
-- ✅ YAML files for structured data (`default-activities.yaml`)
+**ALWAYS use LLM or configuration:**
+- ✅ **LLM (Claude Sonnet)** for ALL travel content (destinations, restaurants, activities)
 - ✅ Properties files for settings (`application.yml`)
 - ✅ Database for dynamic content
-- ✅ Separate prompt files (`prompts/system_prompts.yaml`)
+- ✅ Separate prompt files for LLM instructions (`prompts/system_prompts.yaml`)
 - ✅ JSON for API responses
 - ✅ Environment variables for secrets
 
 **Examples:**
 
-❌ **Bad (Hardcoded):**
+❌ **Bad (Hardcoded travel data):**
 ```java
 if (location.equals("Seoul")) {
     activity = "Visit Gyeongbokgung Palace";
@@ -41,21 +41,26 @@ if (location.equals("Seoul")) {
 }
 ```
 
-✅ **Good (Configuration):**
+❌ **Bad (Hardcoded in YAML):**
+```yaml
+Seoul:
+  day1:
+    activity: "Morning: 경복궁 (₩3,000), Evening: 명동교자..."
+```
+
+✅ **Good (LLM-Only):**
 ```java
-// Load from YAML file
-Map<String, String> activity = activityLoader.getActivity(location);
+// Call LLM Agent - Claude generates ALL travel data dynamically
+return llmAgentClient.generatePlan(llmRequest)
+    .map(llmResponse -> buildTravelPlan(llmResponse))
+    .onErrorResume(error -> Mono.error(new ServiceException("AI temporarily unavailable")));
 ```
 
-❌ **Bad (Hardcoded):**
+✅ **Good (Prompt configuration only):**
 ```python
-prompt = "Create a travel plan for Seoul with these attractions: Gyeongbokgung, Myeongdong..."
-```
-
-✅ **Good (Configuration):**
-```python
-# Load from prompts/planning.yaml
-prompt = prompt_loader.get_planning_prompt(location="Seoul")
+# Load instructions for Claude from prompts/system_prompts.yaml
+prompt = prompt_loader.get_planning_prompt(location=location)
+# Claude generates real restaurants, activities, costs dynamically
 ```
 
 ## Architecture Overview
@@ -90,12 +95,14 @@ Cache: Redis 7.4 for refresh tokens + LLM cache
 - Video Worker polls SQS → checks DB status → processes (FFmpeg) → uploads to S3 → SNS push
 - NO client polling - use push notifications
 
-**AI Planning (LLM-Only Strategy):**
-- Plan Service → LLM Agent (sync REST)
-- LLM Agent → **AWS Bedrock Claude Sonnet ONLY** (no external APIs)
+**AI Planning (LLM-Only Strategy - NO FALLBACK):**
+- Plan Service (Java) → LLM Agent (Python) via REST
+- LLM Agent uses **LangChain & LangGraph** for iterative planning logic
+- LangGraph → **AWS Bedrock Claude Sonnet 3.5** (anthropic.claude-3-5-sonnet-20241022-v2:0)
 - Smart prompt engineering with user preferences (destination, dates, budget, interests)
 - Comprehensive Korea travel knowledge built into Claude Sonnet
 - Responses cached in Redis (1hr TTL) for 90%+ cost savings
+- **NO hardcoded fallback** - If LLM fails, return error to user (honest UX)
 
 ### Resource Constraints
 

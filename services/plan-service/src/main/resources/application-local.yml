@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oddiya?currentSchema=plan_service
+    username: oddiya_user
+    password: oddiya_password_dev
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        default_schema: plan_service
+
+logging:
+  level:
+    com.oddiya.plan: DEBUG

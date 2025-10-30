@@ -1,0 +1,64 @@
+# UI Messages Configuration
+# All UI strings externalized to prevent hardcoding
+# Can be loaded via /api/messages/ko endpoint
+
+ui:
+  messages:
+    ko:
+      # App Header
+      app.title: "Oddiya"
+      app.subtitle: "AI 여행 플래너"
+
+      # Form Labels
+      form.create.title: "여행 계획 만들기"
+      form.label.location: "여행지"
+      form.label.title: "여행 제목"
+      form.label.startDate: "시작일"
+      form.label.endDate: "종료일"
+
+      # Placeholders
+      form.placeholder.location: "예: 서울, 부산, 제주, 경주, 전주"
+      form.placeholder.title: "예: 힐링 여행"
+
+      # Buttons
+      button.createPlan: "🤖 AI 여행 계획 생성"
+      button.backToList: "← 목록으로"
+      button.uploadPhotos: "📤 사진 업로드"
+      button.createVideo: "🎬 영상 생성 시작 (약 2-3분)"
+
+      # Messages
+      message.noPlan: "아직 여행 계획이 없습니다"
+      message.loading: "AI가 계획 생성 중..."
+      message.loadingFailed: "로딩 실패"
+      message.planCreated: "✅ 여행 계획이 생성되었습니다!"
+      message.planFailed: "❌ 생성에 실패했습니다"
+      message.selectPhotos: "사진을 선택해주세요"
+      message.photoUploading: "사진 업로드 중..."
+      message.photoUploaded: "장의 사진이 업로드되었습니다!"
+      message.photoUploadFailed: "업로드에 실패했습니다"
+      message.allFieldsRequired: "모든 항목을 입력해주세요"
+      message.detailLoadFailed: "상세 정보를 불러올 수 없습니다"
+
+      # Video Section
+      video.title: "🎬 여행 영상 만들기"
+      video.description: "장의 사진으로 멋진 영상을 만들어드립니다!"
+      video.starting: "🎬 영상 생성을 시작합니다..."
+      video.confirm: "업로드한 사진으로 영상을 만드시겠습니까?\\n(약 2-3분 소요)"
+      video.completed: "🎉 영상이 완성되었습니다!"
+      video.failed: "❌ 영상 생성에 실패했습니다"
+      video.requestFailed: "영상 생성 요청에 실패했습니다"
+
+      # Photo Section
+      photo.title: "여행 사진 추가하기"
+      photo.titleAdd: "사진 더 추가하기"
+      photo.description: "여행의 추억을 사진으로 남겨보세요! (최대 10장)"
+      photo.uploaded: "📸 업로드된 사진"
+      photo.count: "장"
+
+      # Time Labels
+      time.morning: "🌅 오전"
+      time.afternoon: "☀️ 오후"
+      time.evening: "🌙 저녁"
+
+      # Day Label
+      label.day: "Day"
