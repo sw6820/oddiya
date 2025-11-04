@@ -24,20 +24,26 @@ provider "aws" {
   }
 }
 
-# VPC
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = {
-    Name = "oddiya-vpc-${var.environment}"
-  }
+# VPC - Use existing vpc-0ce0562f13566cbf6 (oddiya-prod-vpc)
+# This avoids VPC limit errors by reusing existing VPC
+data "aws_vpc" "main" {
+  id = "vpc-0ce0562f13566cbf6"
 }
+
+# Create new VPC only if the existing one doesn't exist (fallback)
+# resource "aws_vpc" "main" {
+#   cidr_block           = "10.0.0.0/16"
+#   enable_dns_hostnames = true
+#   enable_dns_support   = true
+#
+#   tags = {
+#     Name = "oddiya-vpc-${var.environment}"
+#   }
+# }
 
 # Internet Gateway
 resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = data.aws_vpc.main.id
 
   tags = {
     Name = "oddiya-igw-${var.environment}"
@@ -46,7 +52,7 @@ resource "aws_internet_gateway" "main" {
 
 # Public Subnet (for App Server)
 resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
+  vpc_id                  = data.aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "${var.aws_region}a"
   map_public_ip_on_launch = true
@@ -58,7 +64,7 @@ resource "aws_subnet" "public" {
 
 # Private Subnet (for DB Server)
 resource "aws_subnet" "private" {
-  vpc_id            = aws_vpc.main.id
+  vpc_id            = data.aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
   availability_zone = "${var.aws_region}a"
 
@@ -74,7 +80,7 @@ resource "aws_subnet" "private" {
 
 # Route Table for Public Subnet
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = data.aws_vpc.main.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -88,7 +94,7 @@ resource "aws_route_table" "public" {
 
 # Route Table for Private Subnet (no internet route - cost optimized)
 resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = data.aws_vpc.main.id
 
   # No default route to internet - saves $32/month on NAT Gateway
   # Database server can only be accessed via app server (bastion)
@@ -113,7 +119,7 @@ resource "aws_route_table_association" "private" {
 resource "aws_security_group" "app_server" {
   name        = "oddiya-app-server-${var.environment}"
   description = "Security group for Oddiya application server"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.main.id
 
   # SSH
   ingress {
@@ -159,7 +165,7 @@ resource "aws_security_group" "app_server" {
 resource "aws_security_group" "db_server" {
   name        = "oddiya-db-server-${var.environment}"
   description = "Security group for Oddiya database server"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.aws_vpc.main.id
 
   # PostgreSQL from app server only
   ingress {
@@ -331,7 +337,7 @@ output "db_server_private_ip" {
 
 output "vpc_id" {
   description = "VPC ID"
-  value       = aws_vpc.main.id
+  value       = data.aws_vpc.main.id
 }
 
 output "public_subnet_id" {
