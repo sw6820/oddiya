@@ -42,23 +42,3 @@ public class PlanResponse {
     }
 }
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-class PlanDetailResponse {
-    private Long id;
-    private Integer day;
-    private String location;
-    private String activity;
-
-    static PlanDetailResponse fromEntity(PlanDetail detail) {
-        return PlanDetailResponse.builder()
-                .id(detail.getId())
-                .day(detail.getDay())
-                .location(detail.getLocation())
-                .activity(detail.getActivity())
-                .build();
-    }
-}
-

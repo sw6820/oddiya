@@ -1,0 +1,175 @@
+name: Build Android App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/build-android.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - beta
+          - production
+
+jobs:
+  build:
+    name: Build Android APK/AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd mobile
+          npm ci
+
+      - name: Update API Configuration
+        run: |
+          cd mobile/src/constants
+          cat > config.ts << EOF
+          export const API_BASE_URL = '${{ secrets.API_BASE_URL }}';
+          export const GOOGLE_CLIENT_ID = '${{ secrets.GOOGLE_CLIENT_ID }}';
+          EOF
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/app/oddiya-release-key.jks
+
+      - name: Create keystore.properties
+        run: |
+          cd mobile/android
+          cat > keystore.properties << EOF
+          storeFile=oddiya-release-key.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Build Release AAB
+        run: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+
+      - name: Build Release APK
+        run: |
+          cd mobile/android
+          ./gradlew assembleRelease
+
+      - name: Sign AAB
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: mobile/android/app/build/outputs/bundle/release
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: mobile/android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: mobile/android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Get version info
+        id: version
+        run: |
+          cd mobile/android
+          VERSION_NAME=$(./gradlew -q printVersionName | tail -1)
+          VERSION_CODE=$(./gradlew -q printVersionCode | tail -1)
+          echo "name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "code=$VERSION_CODE" >> $GITHUB_OUTPUT
+
+      - name: Create Release Notes
+        run: |
+          echo "## Android Build Complete! 📱" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Type:** Release" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifacts:**" >> $GITHUB_STEP_SUMMARY
+          echo "- AAB (Play Store): ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- APK (Direct Install): ✅" >> $GITHUB_STEP_SUMMARY
+
+  deploy-internal:
+    name: Deploy to Internal Testing
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-aab
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Install Fastlane
+        run: |
+          gem install fastlane -N
+
+      - name: Create Google Play Service Account JSON
+        run: |
+          echo "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}" > service-account.json
+
+      - name: Deploy to Internal Testing
+        run: |
+          cd mobile/android
+          fastlane supply \
+            --aab app-release.aab \
+            --track internal \
+            --json_key ../../service-account.json \
+            --package_name com.oddiya.app
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f service-account.json
+
+      - name: Deployment Status
+        run: |
+          echo "### Internal Testing Deployment Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Track:** Internal Testing" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Uploaded to Google Play Console" >> $GITHUB_STEP_SUMMARY

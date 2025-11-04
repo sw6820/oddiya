@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oddiya AI Streaming Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-container {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .status {
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status.cached {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .status-icon {
+            font-size: 20px;
+        }
+
+        .status-text {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .progress-percent {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .chunks-container {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .chunk {
+            margin-bottom: 5px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .plan-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f9ff;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .plan-result.active {
+            display: block;
+            animation: slideIn 0.4s;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .plan-title {
+            font-size: 24px;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .plan-cost {
+            font-size: 20px;
+            color: #764ba2;
+            font-weight: 700;
+        }
+
+        .plan-day {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .day-header {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .day-location {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .day-activity {
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .day-cost {
+            color: #764ba2;
+            font-weight: 600;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .metadata {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #4caf50;
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge.cached {
+            background: #2196f3;
+        }
+
+        .timer {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .error {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Oddiya AI Streaming Test</h1>
+        <p class="subtitle">ChatGPT-style real-time travel plan generation with Redis caching</p>
+
+        <form id="planForm">
+            <div class="form-group">
+                <label for="location">📍 Destination</label>
+                <input type="text" id="location" value="Seoul" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startDate">📅 Start Date</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">📅 End Date</label>
+                    <input type="date" id="endDate" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="budget">💰 Budget Level</label>
+                <select id="budget">
+                    <option value="low">Low (₩50,000/day)</option>
+                    <option value="medium" selected>Medium (₩100,000/day)</option>
+                    <option value="high">High (₩200,000+/day)</option>
+                </select>
+            </div>
+
+            <button type="submit" id="generateBtn">Generate Travel Plan 🎯</button>
+        </form>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="status" id="statusBox">
+                <span class="status-icon">⏳</span>
+                <span class="status-text" id="statusText">Initializing...</span>
+                <span class="progress-percent" id="progressPercent">0%</span>
+            </div>
+            <div class="chunks-container" id="chunksContainer"></div>
+            <div class="timer" id="timer">Time elapsed: 0s</div>
+        </div>
+
+        <div class="plan-result" id="planResult"></div>
+    </div>
+
+    <script>
+        // Set default dates (tomorrow to 3 days later)
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const endDate = new Date(tomorrow);
+        endDate.setDate(endDate.getDate() + 2);
+
+        document.getElementById('startDate').value = tomorrow.toISOString().split('T')[0];
+        document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+
+        let startTime;
+        let timerInterval;
+
+        document.getElementById('planForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const location = document.getElementById('location').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const budget = document.getElementById('budget').value;
+
+            // Reset UI
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('progressContainer').classList.add('active');
+            document.getElementById('planResult').classList.remove('active');
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('chunksContainer').innerHTML = '';
+
+            // Start timer
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timer').textContent = `Time elapsed: ${elapsed}s`;
+            }, 100);
+
+            try {
+                await generatePlanStreaming({
+                    location,
+                    startDate,
+                    endDate,
+                    budget
+                });
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = `❌ Error: ${error.message}`;
+                document.getElementById('progressContainer').appendChild(errorDiv);
+            } finally {
+                document.getElementById('generateBtn').disabled = false;
+                clearInterval(timerInterval);
+            }
+        });
+
+        async function generatePlanStreaming(request) {
+            const response = await fetch('http://localhost:8000/api/v1/plans/generate/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let isCached = false;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const eventData = line.substring(6);
+                        if (!eventData.trim()) continue;
+
+                        try {
+                            const event = JSON.parse(eventData);
+                            handleEvent(event);
+
+                            if (event.cached) {
+                                isCached = true;
+                            }
+                        } catch (err) {
+                            console.error('Failed to parse event:', eventData, err);
+                        }
+                    }
+                }
+            }
+        }
+
+        function handleEvent(event) {
+            const statusBox = document.getElementById('statusBox');
+            const statusText = document.getElementById('statusText');
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            const chunksContainer = document.getElementById('chunksContainer');
+
+            switch (event.type) {
+                case 'status':
+                    statusText.textContent = event.message;
+                    if (event.cached) {
+                        statusBox.classList.add('cached');
+                    }
+                    if (event.progress !== undefined) {
+                        progressBar.style.width = event.progress + '%';
+                        progressPercent.textContent = event.progress + '%';
+                    }
+                    break;
+
+                case 'progress':
+                    statusText.textContent = event.message;
+                    if (event.progress !== undefined) {
+                        progressBar.style.width = event.progress + '%';
+                        progressPercent.textContent = event.progress + '%';
+                    }
+                    break;
+
+                case 'chunk':
+                    const chunk = document.createElement('div');
+                    chunk.className = 'chunk';
+                    chunk.textContent = event.content;
+                    chunksContainer.appendChild(chunk);
+                    chunksContainer.scrollTop = chunksContainer.scrollHeight;
+                    break;
+
+                case 'complete':
+                    statusText.textContent = event.message || '✅ Plan generation complete!';
+                    progressBar.style.width = '100%';
+                    progressPercent.textContent = '100%';
+                    if (event.cached) {
+                        statusBox.classList.add('cached');
+                    }
+                    displayPlan(event.plan, event.cached);
+                    break;
+
+                case 'error':
+                    statusText.textContent = '❌ ' + event.message;
+                    statusBox.style.background = '#ffebee';
+                    statusBox.style.borderLeft = '4px solid #f44336';
+                    break;
+
+                case 'done':
+                    console.log('Stream completed');
+                    break;
+            }
+        }
+
+        function displayPlan(plan, cached) {
+            const planResult = document.getElementById('planResult');
+
+            let html = `
+                <div class="plan-header">
+                    <div>
+                        <div class="plan-title">${plan.title || 'Travel Plan'}</div>
+                        ${cached ? '<span class="badge cached">💾 Cached</span>' : '<span class="badge">✨ Newly Generated</span>'}
+                    </div>
+                    <div class="plan-cost">₩${(plan.total_estimated_cost || 0).toLocaleString()}</div>
+                </div>
+            `;
+
+            if (plan.days && plan.days.length > 0) {
+                plan.days.forEach(day => {
+                    html += `
+                        <div class="plan-day">
+                            <div class="day-header">Day ${day.day} - ${day.location}</div>
+                            <div class="day-activity">${day.activity}</div>
+                            <div class="day-cost">Cost: ₩${(day.estimatedCost || 0).toLocaleString()}</div>
+                        </div>
+                    `;
+                });
+            }
+
+            if (plan.metadata) {
+                html += `
+                    <div class="metadata">
+                        <div class="metadata-item">🤖 ${plan.metadata.ai_model || 'Unknown'}</div>
+                        <div class="metadata-item">🔄 ${plan.metadata.iterations || 1} iterations</div>
+                        <div class="metadata-item">📅 ${new Date(plan.metadata.generated_at).toLocaleString()}</div>
+                    </div>
+                `;
+            }
+
+            planResult.innerHTML = html;
+            planResult.classList.add('active');
+            planResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    </script>
+</body>
+</html>

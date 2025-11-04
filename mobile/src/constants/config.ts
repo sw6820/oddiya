@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
   // Auth
   LOGIN: '/api/auth/login',
   SIGNUP: '/api/auth/signup',
+  GOOGLE_LOGIN: '/api/auth/google',
   OAUTH_CALLBACK: '/api/auth/oauth2/callback',
   REFRESH_TOKEN: '/api/auth/refresh',
 

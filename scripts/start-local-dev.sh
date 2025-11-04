@@ -43,12 +43,13 @@ echo -e "${GREEN}✓ Redis is ready${NC}"
 # Step 2: Start LLM Agent (Python FastAPI)
 echo -e "\n${YELLOW}Step 2: Starting LLM Agent (Python FastAPI on port 8000)...${NC}"
 
-# Check if .env.bedrock exists
-if [ ! -f "services/llm-agent/.env.bedrock" ]; then
-    echo -e "${RED}⚠ Warning: services/llm-agent/.env.bedrock not found${NC}"
-    echo "  Creating .env.bedrock from template..."
-    cp .env.example services/llm-agent/.env.bedrock
-    echo "  Please configure AWS credentials in services/llm-agent/.env.bedrock"
+# Check if .env exists for LLM agent
+if [ ! -f "services/llm-agent/.env" ]; then
+    echo -e "${RED}⚠ Warning: services/llm-agent/.env not found${NC}"
+    echo "  Creating .env from template..."
+    cp services/llm-agent/.env.example services/llm-agent/.env 2>/dev/null || cp .env.example services/llm-agent/.env
+    echo "  ⚠️  Please configure GOOGLE_API_KEY in services/llm-agent/.env"
+    echo "  Get your FREE Gemini API key: https://makersuite.google.com/app/apikey"
 fi
 
 cd services/llm-agent

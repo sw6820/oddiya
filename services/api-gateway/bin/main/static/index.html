@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oddiya - Travel Planner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .auth-section {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .login-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.3s;
+        }
+
+        .login-btn:hover {
+            background: #357ae8;
+        }
+
+        .login-btn::before {
+            content: "G";
+            background: white;
+            color: #4285f4;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .user-section {
+            display: none;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .user-info h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .user-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .user-detail:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .value {
+            color: #333;
+        }
+
+        .plans-section {
+            margin-top: 30px;
+        }
+
+        .plans-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .plan-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        .plan-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .plan-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .no-plans {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .create-plan-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .create-plan-btn:hover {
+            background: #5568d3;
+        }
+
+        .create-form {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .create-form h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .submit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #5568d3;
+        }
+
+        .cancel-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .cancel-btn:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌏 Oddiya</h1>
+        <p class="subtitle">AI-Powered Travel Planner</p>
+
+        <!-- Login Section (shown when not authenticated) -->
+        <div id="authSection" class="auth-section">
+            <h2>Welcome!</h2>
+            <p style="margin: 20px 0; color: #666;">Sign in to start planning your travels</p>
+            <button class="login-btn" onclick="login()">
+                Sign in with Google
+            </button>
+        </div>
+
+        <!-- Loading Section -->
+        <div id="loadingSection" class="loading" style="display: none;">
+            Loading...
+        </div>
+
+        <!-- User Section (shown after login) -->
+        <div id="userSection" class="user-section">
+            <div class="user-info">
+                <h2>👤 Profile</h2>
+                <div class="user-detail">
+                    <span class="label">Name:</span>
+                    <span class="value" id="userName"></span>
+                </div>
+                <div class="user-detail">
+                    <span class="label">Email:</span>
+                    <span class="value" id="userEmail"></span>
+                </div>
+                <div class="user-detail">
+                    <span class="label">User ID:</span>
+                    <span class="value" id="userId"></span>
+                </div>
+                <div class="user-detail">
+                    <span class="label">Provider:</span>
+                    <span class="value" id="userProvider"></span>
+                </div>
+            </div>
+
+            <div class="plans-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">📅 My Travel Plans</h2>
+                    <button class="create-plan-btn" onclick="showCreatePlanForm()">+ Create Plan</button>
+                </div>
+                <div id="plansContainer">
+                    <div class="no-plans">No travel plans yet. Create your first plan!</div>
+                </div>
+            </div>
+
+            <!-- Create Plan Form (hidden by default) -->
+            <div id="createPlanForm" style="display: none;" class="create-form">
+                <h3>Create New Travel Plan</h3>
+                <form onsubmit="createPlan(event)">
+                    <div class="form-group">
+                        <label>Destination</label>
+                        <input type="text" id="destination" required placeholder="e.g., Seoul, Busan">
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>End Date</label>
+                        <input type="date" id="endDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Budget (KRW)</label>
+                        <input type="number" id="budget" placeholder="e.g., 500000">
+                    </div>
+                    <div class="form-group">
+                        <label>Interests (comma separated)</label>
+                        <input type="text" id="interests" placeholder="e.g., food, culture, nature">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="submit-btn">Create Plan</button>
+                        <button type="button" class="cancel-btn" onclick="hideCreatePlanForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Error Section -->
+        <div id="errorSection" style="display: none;" class="error"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+
+        // Check if this is OAuth callback and store tokens
+        window.addEventListener('DOMContentLoaded', () => {
+            // First, check if we have tokens in URL (from OAuth callback)
+            const urlParams = new URLSearchParams(window.location.search);
+            const accessToken = urlParams.get('accessToken');
+            const refreshToken = urlParams.get('refreshToken');
+            const userId = urlParams.get('userId');
+
+            if (accessToken && refreshToken) {
+                console.log('OAuth callback detected, storing tokens');
+                localStorage.setItem('accessToken', accessToken);
+                localStorage.setItem('refreshToken', refreshToken);
+                localStorage.setItem('userId', userId);
+
+                // Clean URL (remove tokens from URL bar)
+                window.history.replaceState({}, document.title, "/");
+            }
+
+            // Then check if user is logged in
+            checkAuthStatus();
+        });
+
+        function login() {
+            // Redirect to OAuth authorization endpoint
+            window.location.href = `${API_BASE}/oauth2/authorize/google`;
+        }
+
+        function logout() {
+            // Clear stored tokens
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userId');
+
+            // Show auth section
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('userSection').style.display = 'none';
+        }
+
+        function showLoading() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('userSection').style.display = 'none';
+            document.getElementById('loadingSection').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSection').style.display = 'none';
+            // Restore user section if user is logged in
+            const accessToken = localStorage.getItem('accessToken');
+            if (accessToken) {
+                document.getElementById('userSection').style.display = 'block';
+            }
+        }
+
+        function showError(message) {
+            const errorSection = document.getElementById('errorSection');
+            errorSection.textContent = message;
+            errorSection.style.display = 'block';
+            setTimeout(() => {
+                errorSection.style.display = 'none';
+            }, 5000);
+        }
+
+        async function checkAuthStatus() {
+            const accessToken = localStorage.getItem('accessToken');
+
+            if (!accessToken) {
+                // Not logged in
+                console.log('No access token found, showing login');
+                document.getElementById('authSection').style.display = 'block';
+                return;
+            }
+
+            console.log('Access token found, checking auth status');
+            showLoading();
+
+            try {
+                // Fetch user profile
+                const response = await fetch(`${API_BASE}/api/v1/users/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                console.log('User profile response status:', response.status);
+
+                if (response.status === 401) {
+                    // Token expired, try refresh
+                    console.log('Token expired, attempting refresh');
+                    await refreshToken();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user profile');
+                }
+
+                const user = await response.json();
+                console.log('User profile loaded:', user);
+                displayUserProfile(user);
+
+                // Fetch user's plans
+                await fetchUserPlans(accessToken);
+
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                // Clear invalid tokens
+                localStorage.clear();
+                showError('Session check failed. Please login again.');
+                document.getElementById('authSection').style.display = 'block';
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayUserProfile(user) {
+            document.getElementById('userName').textContent = user.name || 'N/A';
+            document.getElementById('userEmail').textContent = user.email || 'N/A';
+            document.getElementById('userId').textContent = user.id || 'N/A';
+            document.getElementById('userProvider').textContent = user.provider || 'N/A';
+
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('userSection').style.display = 'block';
+        }
+
+        async function fetchUserPlans(accessToken) {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/plans`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    // Plan Service might not be running
+                    if (response.status === 500 || response.status === 503) {
+                        console.warn('Plan Service not available');
+                        document.getElementById('plansContainer').innerHTML =
+                            '<div class="no-plans">Plan Service is currently unavailable. Start the Plan Service to create and view travel plans.</div>';
+                        return;
+                    }
+                    throw new Error('Failed to fetch plans');
+                }
+
+                const plans = await response.json();
+                displayPlans(plans);
+
+            } catch (error) {
+                console.error('Failed to fetch plans:', error);
+                document.getElementById('plansContainer').innerHTML =
+                    '<div class="no-plans">Plan Service is not running yet. Start the service to create travel plans!</div>';
+            }
+        }
+
+        function displayPlans(plans) {
+            console.log('displayPlans() called with:', plans);
+            const container = document.getElementById('plansContainer');
+
+            if (!plans || plans.length === 0) {
+                console.log('No plans to display');
+                container.innerHTML = '<div class="no-plans">No travel plans yet. Create your first plan!</div>';
+                return;
+            }
+
+            console.log('Rendering', plans.length, 'plan(s)');
+            container.innerHTML = plans.map(plan => `
+                <div class="plan-card">
+                    <h3>${plan.title || plan.destination}</h3>
+                    <p><strong>📅 Dates:</strong> ${plan.startDate} ~ ${plan.endDate}</p>
+                    ${plan.details && plan.details.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            ${plan.details.map(day => `
+                                <div style="background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 3px solid #667eea;">
+                                    <h4 style="color: #667eea; margin: 0 0 8px 0;">Day ${day.day}: ${day.location}</h4>
+                                    <p style="color: #666; margin: 0; line-height: 1.6;">${day.activity}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+            console.log('Plan HTML rendered successfully');
+        }
+
+        async function refreshToken() {
+            const refreshToken = localStorage.getItem('refreshToken');
+
+            if (!refreshToken) {
+                logout();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ refreshToken })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Token refresh failed');
+                }
+
+                const data = await response.json();
+                localStorage.setItem('accessToken', data.accessToken);
+                localStorage.setItem('refreshToken', data.refreshToken);
+
+                // Retry checking auth status
+                checkAuthStatus();
+
+            } catch (error) {
+                console.error('Token refresh failed:', error);
+                showError('Session expired. Please login again.');
+                logout();
+            }
+        }
+
+        function showCreatePlanForm() {
+            document.getElementById('createPlanForm').style.display = 'block';
+            // Scroll to form
+            document.getElementById('createPlanForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideCreatePlanForm() {
+            document.getElementById('createPlanForm').style.display = 'none';
+            // Clear form fields
+            document.getElementById('destination').value = '';
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('budget').value = '';
+            document.getElementById('interests').value = '';
+        }
+
+        async function createPlan(event) {
+            event.preventDefault();
+            console.log('1. createPlan() called');
+
+            const accessToken = localStorage.getItem('accessToken');
+            if (!accessToken) {
+                showError('Please login first');
+                return;
+            }
+
+            // Get form values
+            const destination = document.getElementById('destination').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const budget = document.getElementById('budget').value;
+            const interests = document.getElementById('interests').value;
+
+            // Validate dates
+            if (new Date(startDate) >= new Date(endDate)) {
+                showError('End date must be after start date');
+                return;
+            }
+
+            // Prepare request body
+            const planRequest = {
+                destination: destination,
+                startDate: startDate,
+                endDate: endDate,
+                budget: budget ? parseInt(budget) : null,
+                interests: interests ? interests.split(',').map(i => i.trim()) : []
+            };
+
+            console.log('2. Creating plan with request:', planRequest);
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/plans`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(planRequest)
+                });
+
+                console.log('3. API response status:', response.status);
+
+                if (response.status === 401) {
+                    console.log('Token expired, attempting refresh');
+                    await refreshToken();
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Failed to create plan');
+                }
+
+                const newPlan = await response.json();
+                console.log('4. Plan created successfully:', newPlan);
+                console.log('5. Plan has details:', newPlan.details ? newPlan.details.length : 0);
+
+                // Hide form and clear fields
+                hideCreatePlanForm();
+
+                // Display the created plan directly (no success message)
+                console.log('6. Calling displayPlans() with new plan');
+                displayPlans([newPlan]);
+                console.log('7. displayPlans() completed');
+
+            } catch (error) {
+                console.error('Failed to create plan:', error);
+                showError(error.message || 'Failed to create plan. Please try again.');
+            } finally {
+                console.log('8. Calling hideLoading()');
+                hideLoading();
+            }
+        }
+
+    </script>
+</body>
+</html>

@@ -1,28 +1,74 @@
 version: '3.8'
 
 services:
-  # PostgreSQL 17.0 for all microservices
-  postgres:
-    image: postgres:17.0
-    container_name: oddiya-postgres
-    environment:
-      POSTGRES_USER: oddiya_user
-      POSTGRES_PASSWORD: oddiya_password_dev
-      POSTGRES_DB: oddiya
+  # Nginx - Reverse Proxy (Port 80 → Services)
+  nginx:
+    image: nginx:alpine
+    container_name: oddiya-nginx
     ports:
-      - "5432:5432"
+      - "80:80"
+      - "443:443"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/docker/postgres-init:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U oddiya_user -d oddiya"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
     networks:
       - oddiya-network
 
-  # Redis 7.4 for caching and refresh tokens
+  # API Gateway - Frontend & Routing (Port 8080)
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: oddiya-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    restart: unless-stopped
+    networks:
+      - oddiya-network
+
+  # Plan Service - Travel Plan API (Port 8083)
+  plan-service:
+    build:
+      context: ./services/plan-service
+      dockerfile: Dockerfile
+    container_name: oddiya-plan-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - LLM_AGENT_URL=http://llm-agent:8000
+    depends_on:
+      - llm-agent
+    restart: unless-stopped
+    networks:
+      - oddiya-network
+
+  # LLM Agent - AI Plan Generation (Python FastAPI, Port 8000)
+  llm-agent:
+    build:
+      context: ./services/llm-agent
+      dockerfile: Dockerfile
+    container_name: oddiya-llm-agent
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_PROVIDER=gemini
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=gemini-2.0-flash-exp
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - oddiya-network
+
+  # Redis 7.4 - Cache for LLM responses
   redis:
     image: redis:7.4-alpine
     container_name: oddiya-redis
@@ -36,11 +82,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
     networks:
       - oddiya-network
 
 volumes:
-  postgres_data:
   redis_data:
 
 networks:

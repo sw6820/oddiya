@@ -1,0 +1,255 @@
+name: Deploy Mobile Apps (Expo)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/deploy-mobile-expo.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - android
+          - ios
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy with EAS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd mobile
+          npm ci
+
+      - name: Create app.config.js with secrets
+        run: |
+          cd mobile
+          cat > app.config.js << 'EOF'
+          export default {
+            name: 'Oddiya',
+            slug: 'oddiya',
+            version: '1.0.0',
+            orientation: 'portrait',
+            icon: './assets/icon.png',
+            userInterfaceStyle: 'light',
+            splash: {
+              image: './assets/splash.png',
+              resizeMode: 'contain',
+              backgroundColor: '#ffffff'
+            },
+            extra: {
+              apiBaseUrl: process.env.API_BASE_URL || '${{ secrets.API_BASE_URL }}',
+              googleClientId: process.env.GOOGLE_CLIENT_ID || '${{ secrets.GOOGLE_CLIENT_ID }}',
+              eas: {
+                projectId: '${{ secrets.EAS_PROJECT_ID }}'
+              }
+            },
+            ios: {
+              supportsTablet: true,
+              bundleIdentifier: 'com.oddiya.app',
+              config: {
+                googleSignIn: {
+                  reservedClientId: '${{ secrets.GOOGLE_CLIENT_ID_IOS }}'
+                }
+              },
+              infoPlist: {
+                CFBundleURLTypes: [
+                  {
+                    CFBundleURLSchemes: ['${{ secrets.GOOGLE_CLIENT_ID_IOS }}']
+                  }
+                ]
+              }
+            },
+            android: {
+              adaptiveIcon: {
+                foregroundImage: './assets/adaptive-icon.png',
+                backgroundColor: '#ffffff'
+              },
+              package: 'com.oddiya.app',
+              googleServicesFile: './google-services.json',
+              permissions: ['INTERNET', 'ACCESS_NETWORK_STATE']
+            },
+            web: {
+              favicon: './assets/favicon.png'
+            },
+            plugins: [
+              '@react-native-google-signin/google-signin',
+              [
+                'expo-build-properties',
+                {
+                  android: {
+                    compileSdkVersion: 34,
+                    targetSdkVersion: 34,
+                    buildToolsVersion: '34.0.0'
+                  },
+                  ios: {
+                    deploymentTarget: '13.4'
+                  }
+                }
+              ]
+            ]
+          }
+          EOF
+
+      - name: Create google-services.json
+        run: |
+          cd mobile/android/app
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > google-services.json
+
+      - name: Create EAS credentials (Android)
+        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all' }}
+        run: |
+          cd mobile
+          echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | base64 -d > android-keystore.jks
+
+          cat > credentials.json << EOF
+          {
+            "android": {
+              "keystore": {
+                "keystorePath": "android-keystore.jks",
+                "keystorePassword": "${{ secrets.KEYSTORE_PASSWORD }}",
+                "keyAlias": "${{ secrets.KEY_ALIAS }}",
+                "keyPassword": "${{ secrets.KEY_PASSWORD }}"
+              }
+            }
+          }
+          EOF
+
+      - name: Build Android (Production)
+        if: ${{ (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all') && github.event.inputs.profile == 'production' }}
+        run: |
+          cd mobile
+          eas build --platform android --profile production --non-interactive --no-wait
+
+      - name: Build Android (Preview)
+        if: ${{ (github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all') && github.event.inputs.profile != 'production' }}
+        run: |
+          cd mobile
+          eas build --platform android --profile preview --non-interactive
+
+      - name: Submit to Google Play (Internal)
+        if: ${{ github.event.inputs.platform == 'android' && github.event.inputs.profile == 'production' }}
+        run: |
+          cd mobile
+          eas submit --platform android --latest --non-interactive
+
+      - name: Build iOS (Production)
+        if: ${{ (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') && github.event.inputs.profile == 'production' }}
+        run: |
+          cd mobile
+          eas build --platform ios --profile production --non-interactive --no-wait
+
+      - name: Build iOS (Preview)
+        if: ${{ (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all') && github.event.inputs.profile != 'production' }}
+        run: |
+          cd mobile
+          eas build --platform ios --profile preview --non-interactive
+
+      - name: Submit to App Store (TestFlight)
+        if: ${{ github.event.inputs.platform == 'ios' && github.event.inputs.profile == 'production' }}
+        run: |
+          cd mobile
+          eas submit --platform ios --latest --non-interactive
+
+      - name: Build Both Platforms
+        if: ${{ github.event.inputs.platform == 'all' }}
+        run: |
+          cd mobile
+          eas build --platform all --profile ${{ github.event.inputs.profile }} --non-interactive
+
+      - name: Get Build URLs
+        id: build-info
+        run: |
+          cd mobile
+          BUILD_URL=$(eas build:list --limit=1 --json | jq -r '.[0].artifacts.buildUrl // "N/A"')
+          echo "url=$BUILD_URL" >> $GITHUB_OUTPUT
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd mobile
+          rm -f android-keystore.jks
+          rm -f credentials.json
+          rm -f android/app/google-services.json
+
+      - name: Deployment Summary
+        run: |
+          echo "### Mobile App Build Complete! 📱" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** ${{ github.event.inputs.platform || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Profile:** ${{ github.event.inputs.profile || 'preview' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build URL:** ${{ steps.build-info.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check EAS dashboard for details:" >> $GITHUB_STEP_SUMMARY
+          echo "https://expo.dev/accounts/${{ secrets.EXPO_USERNAME }}/projects/oddiya/builds" >> $GITHUB_STEP_SUMMARY
+
+  update-ota:
+    name: OTA Update
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd mobile
+          npm ci
+
+      - name: Publish OTA Update
+        run: |
+          cd mobile
+          npx expo publish --non-interactive
+
+      - name: OTA Update Summary
+        run: |
+          echo "### OTA Update Published! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Users will receive the update automatically on next app launch." >> $GITHUB_STEP_SUMMARY

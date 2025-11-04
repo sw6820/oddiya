@@ -97,6 +97,26 @@ public class AuthService {
     }
 
     /**
+     * OAuth Success Handler (for Spring Security OAuth2 Client)
+     */
+    public TokenResponse handleOAuthSuccess(String email, String name, String provider, String oauthId) {
+        // Create or find user via User Service internal API
+        UserServiceClient.UserResponse userResponse = userServiceClient.createOrFindUser(
+            new UserServiceClient.CreateUserRequest(
+                email,
+                name,
+                provider,
+                oauthId
+            )
+        );
+
+        Long userId = userResponse.getId();
+
+        // Generate tokens
+        return generateTokenResponse(userId, email);
+    }
+
+    /**
      * Generate token response (extracted for reuse)
      */
     private TokenResponse generateTokenResponse(Long userId, String email) {

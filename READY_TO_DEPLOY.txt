@@ -1,0 +1,179 @@
+╔══════════════════════════════════════════════════════════════╗
+║          🚀 배포 준비 완료! (AWS + Android) 🚀              ║
+╚══════════════════════════════════════════════════════════════╝
+
+작성일: 2025-11-04
+상태: ✅ 모든 설정 완료, 배포 준비됨
+
+────────────────────────────────────────────────────────────────
+
+✅ 완료된 작업
+
+1. 환경 설정
+   ✅ Gemini API 키 설정 (AI 여행 플래닝)
+   ✅ Google OAuth 설정 (Android/iOS 로그인)
+   ✅ Apple OAuth 설정 (iOS용, 선택사항)
+   ✅ 데이터베이스 비밀번호 생성 (32자 보안)
+   ✅ Seoul 리전 설정 (ap-northeast-2)
+   ✅ 모든 시크릿 보안 처리 (.gitignore)
+
+2. 인프라 구성
+   ✅ Terraform 설정 (VPC, 서브넷, 보안 그룹)
+   ✅ EC2 인스턴스 설정 (t2.micro x2)
+   ✅ 비용 최적화 (~$5/월)
+   ✅ 배포 스크립트 준비
+
+3. 문서 작성
+   ✅ AWS 배포 가이드 (한국어)
+   ✅ Android 배포 가이드 (한국어)
+   ✅ 배포 종합 요약
+   ✅ OAuth 설정 가이드
+   ✅ Apple OAuth 가이드 (선택사항)
+
+────────────────────────────────────────────────────────────────
+
+📋 배포 순서
+
+Phase 1: AWS 배포 (30-40분)
+  1. SSH 키 생성 (5분)
+     → AWS_DEPLOYMENT_GUIDE.md 참조
+  
+  2. Terraform 배포 (15분)
+     cd infrastructure/terraform/phase1
+     terraform init && terraform apply
+  
+  3. 데이터베이스 설정 (5분)
+     ./scripts/setup-database-phase1.sh
+  
+  4. 애플리케이션 배포 (10분)
+     ./scripts/deploy-phase1.sh
+  
+  5. 검증 (2분)
+     curl http://$APP_IP:8000/health
+     curl http://$APP_IP:8083/actuator/health
+
+Phase 2: Android 배포 (2-3시간)
+  1. Play Developer 계정 ($25, 30분)
+     → ANDROID_DEPLOYMENT_GUIDE.md 참조
+  
+  2. API URL 업데이트 (5분)
+     mobile/src/constants/config.ts
+  
+  3. 앱 서명 키 생성 (10분)
+     keytool -genkey -v -keystore oddiya-release-key.jks
+  
+  4. 릴리스 빌드 (15분)
+     cd mobile/android
+     ./gradlew bundleRelease
+  
+  5. Play Console 업로드 (30분)
+     스토어 등록 + AAB 업로드
+  
+  6. 심사 대기 (1-7일)
+     Google 승인 → 자동 배포
+
+────────────────────────────────────────────────────────────────
+
+🎯 빠른 시작 명령어
+
+AWS 배포:
+  cd infrastructure/terraform/phase1
+  terraform init && terraform apply -auto-approve
+  cd ../../../
+  ./scripts/setup-database-phase1.sh
+  ./scripts/deploy-phase1.sh
+
+Android 빌드:
+  cd mobile/android
+  ./gradlew clean bundleRelease
+
+────────────────────────────────────────────────────────────────
+
+💰 예상 비용
+
+초기 비용:
+  • Play Developer: $25 (일회성)
+  • AWS 프리티어: $0 (12개월)
+  ════════════════════════════════
+  합계: $25
+
+월별 비용 (프리티어):
+  • EC2 t2.micro x2: $0
+  • EBS + 데이터: ~$5
+  ════════════════════════════════
+  합계: ~$5/월
+
+월별 비용 (프리티어 후):
+  • EC2 t2.micro x2: $17
+  • EBS + 데이터: ~$9
+  ════════════════════════════════
+  합계: ~$26/월
+
+────────────────────────────────────────────────────────────────
+
+📚 문서 위치
+
+설정 완료:
+  • SETUP_COMPLETE.md
+  • OAUTH_STATUS.md
+  • FINAL_STATUS.txt
+
+배포 가이드:
+  • AWS_DEPLOYMENT_GUIDE.md (한국어) ← 먼저 읽기!
+  • ANDROID_DEPLOYMENT_GUIDE.md (한국어)
+  • DEPLOYMENT_SUMMARY.md (종합)
+
+선택 가이드:
+  • APPLE_OAUTH_SETUP.md (iOS App Store용)
+
+────────────────────────────────────────────────────────────────
+
+✅ 배포 체크리스트
+
+AWS 배포:
+  [ ] SSH 키 생성 (AWS Console)
+  [ ] terraform apply 실행
+  [ ] 데이터베이스 설정
+  [ ] 애플리케이션 배포
+  [ ] Health check 통과
+
+Android 배포:
+  [ ] Play Developer 계정 ($25)
+  [ ] API URL 업데이트
+  [ ] Keystore 생성
+  [ ] AAB 빌드
+  [ ] Play Console 업로드
+
+────────────────────────────────────────────────────────────────
+
+🎊 배포 완료 후
+
+서버 확인:
+  APP_IP=$(cd infrastructure/terraform/phase1 && \
+           terraform output -raw app_server_public_ip)
+  echo "서버: http://$APP_IP:8083"
+
+앱 다운로드:
+  https://play.google.com/store/apps/details?id=com.oddiya.app
+
+────────────────────────────────────────────────────────────────
+
+⚠️ 중요 사항
+
+• Keystore 파일 백업 필수! (분실 시 앱 업데이트 불가)
+• AWS 프리티어 12개월 후 비용 증가 ($5 → $26)
+• IP 변경 시 terraform.tfvars 업데이트 필요
+• 모든 시크릿은 절대 커밋하지 않기
+
+────────────────────────────────────────────────────────────────
+
+🚀 다음 단계
+
+1. AWS_DEPLOYMENT_GUIDE.md 열기
+2. 단계별로 따라하기
+3. 성공 시 ANDROID_DEPLOYMENT_GUIDE.md로 이동
+4. 완료!
+
+╔══════════════════════════════════════════════════════════════╗
+║              시작하려면: AWS_DEPLOYMENT_GUIDE.md             ║
+╚══════════════════════════════════════════════════════════════╝

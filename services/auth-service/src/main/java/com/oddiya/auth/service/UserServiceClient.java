@@ -29,7 +29,7 @@ public class UserServiceClient {
         try {
             CreateEmailUserRequest request = new CreateEmailUserRequest(email, name, provider, passwordHash);
             return webClient.post()
-                    .uri("/internal/users/email")
+                    .uri("/api/v1/users/internal/users/email")
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(UserResponse.class)
@@ -47,7 +47,7 @@ public class UserServiceClient {
     public UserResponse findUserByEmail(String email) {
         try {
             return webClient.get()
-                    .uri("/internal/users/email/{email}", email)
+                    .uri("/api/v1/users/internal/users/email/{email}", email)
                     .retrieve()
                     .bodyToMono(UserResponse.class)
                     .timeout(Duration.ofSeconds(5))
@@ -64,7 +64,7 @@ public class UserServiceClient {
     public UserResponse createOrFindUser(CreateUserRequest request) {
         try {
             return webClient.post()
-                    .uri("/internal/users")
+                    .uri("/api/v1/users/internal/users")
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(UserResponse.class)

@@ -60,7 +60,7 @@ class LangGraphPlanner:
     """Iterative travel planner using LangGraph"""
     
     def __init__(self):
-        self.mock_mode = os.getenv("MOCK_MODE", "true").lower() == "true"
+        self.mock_mode = os.getenv("MOCK_MODE", "false").lower() == "true"  # Default: Use real LLM
         llm_provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
 
         if not self.mock_mode:
@@ -446,7 +446,7 @@ class LangGraphPlanner:
     ) -> Dict[str, Any]:
         """
         Main entry point: Generate travel plan with iterative refinement
-        
+
         Args:
             title: Trip title
             location: City name
@@ -454,7 +454,7 @@ class LangGraphPlanner:
             end_date: End date (YYYY-MM-DD)
             budget: Budget level (low/medium/high)
             max_iterations: Maximum refinement iterations
-            
+
         Returns:
             Complete travel plan with AI recommendations
         """
@@ -462,7 +462,7 @@ class LangGraphPlanner:
         start = datetime.fromisoformat(start_date)
         end = datetime.fromisoformat(end_date)
         num_days = (end - start).days + 1
-        
+
         # Initialize state
         initial_state: PlanState = {
             "title": title,
@@ -480,23 +480,223 @@ class LangGraphPlanner:
             "final_plan": {},
             "messages": []
         }
-        
+
         # Run the graph
         logger.info(f"[LangGraph] Starting plan generation for {location}, {num_days} days")
-        
+
         try:
             result = await self.graph.ainvoke(initial_state)
             final_plan = result["final_plan"]
-            
+
             logger.info(f"[LangGraph] Plan generated successfully after {result['current_iteration']} iterations")
-            
+
             if LANGSMITH_ENABLED:
                 logger.info("[LangSmith] Trace available in LangSmith dashboard")
-            
+
             return final_plan
-            
+
         except Exception as e:
             logger.error(f"[LangGraph] Error generating plan: {e}")
             # Return simple fallback
             return self._generate_mock_draft(initial_state)
+
+    async def generate_plan_streaming(
+        self,
+        title: str,
+        location: str,
+        start_date: str,
+        end_date: str,
+        budget: str = "medium",
+        max_iterations: int = 3
+    ):
+        """
+        Streaming version of generate_plan - yields progress updates
+
+        Yields events in format:
+        {
+            "type": "status|progress|chunk|complete|error",
+            "message": "...",  # For status updates
+            "progress": 0-100,  # For progress tracking
+            "step": "gather_context|generate_draft|...",  # Current step
+            "content": "...",  # For LLM chunks
+            "plan": {...}  # Final plan for complete event
+        }
+        """
+        from typing import AsyncGenerator
+
+        # Calculate number of days
+        start = datetime.fromisoformat(start_date)
+        end = datetime.fromisoformat(end_date)
+        num_days = (end - start).days + 1
+
+        # Initialize state
+        initial_state: PlanState = {
+            "title": title,
+            "location": location,
+            "start_date": start_date,
+            "end_date": end_date,
+            "budget": budget,
+            "num_days": num_days,
+            "weather_data": {},
+            "places_data": {},
+            "current_iteration": 0,
+            "max_iterations": max_iterations,
+            "plan_draft": {},
+            "feedback": [],
+            "final_plan": {},
+            "messages": []
+        }
+
+        logger.info(f"[LangGraph Streaming] Starting plan generation for {location}, {num_days} days")
+
+        try:
+            # Step 1: Gather context (20% progress)
+            yield {
+                "type": "status",
+                "message": f"{location}의 날씨 정보를 수집하고 있습니다...",
+                "progress": 10,
+                "step": "gather_context"
+            }
+
+            state = await self.gather_context_node(initial_state)
+
+            yield {
+                "type": "progress",
+                "message": "날씨 정보 수집 완료",
+                "progress": 20,
+                "step": "gather_context"
+            }
+
+            # Step 2: Generate draft (20-60% progress)
+            yield {
+                "type": "status",
+                "message": "AI가 여행 계획을 생성하고 있습니다...",
+                "progress": 30,
+                "step": "generate_draft"
+            }
+
+            # For mock mode, use simple generation
+            if self.mock_mode or not self.llm:
+                draft = self._generate_mock_draft(state)
+                state["plan_draft"] = draft
+                state["messages"].append(AIMessage(content="Mock plan generated"))
+
+                yield {
+                    "type": "progress",
+                    "message": "초안 생성 완료",
+                    "progress": 60,
+                    "step": "generate_draft"
+                }
+            else:
+                # Real LLM streaming
+                prompt = self._build_planning_prompt(state)
+                messages = state["messages"] + [HumanMessage(content=prompt)]
+
+                # Accumulate streamed content
+                full_content = ""
+                chunk_count = 0
+                min_chunk_size = 10  # Minimum chars before yielding
+
+                async for chunk in self.llm.astream(messages):
+                    if hasattr(chunk, 'content') and chunk.content:
+                        full_content += chunk.content
+                        chunk_count += 1
+
+                        # Yield chunks periodically (every 10 chunks or when min_chunk_size reached)
+                        if chunk_count >= 10 and len(chunk.content) >= min_chunk_size:
+                            yield {
+                                "type": "chunk",
+                                "content": chunk.content,
+                                "progress": min(30 + (chunk_count // 10), 55),
+                                "step": "generate_draft"
+                            }
+                            chunk_count = 0
+
+                # Parse complete response
+                draft = self._parse_llm_response(full_content, state)
+                state["plan_draft"] = draft
+                state["messages"].append(AIMessage(content=full_content))
+
+                yield {
+                    "type": "progress",
+                    "message": f"{len(draft.get('days', []))}일 일정 초안 생성 완료",
+                    "progress": 60,
+                    "step": "generate_draft"
+                }
+
+            # Step 3: Validate plan (60-70%)
+            yield {
+                "type": "status",
+                "message": "계획을 검증하고 있습니다...",
+                "progress": 65,
+                "step": "validate_plan"
+            }
+
+            state = await self.validate_plan_node(state)
+
+            feedback_count = len(state["feedback"])
+            if feedback_count > 0:
+                yield {
+                    "type": "progress",
+                    "message": f"개선할 점 {feedback_count}개 발견",
+                    "progress": 70,
+                    "step": "validate_plan"
+                }
+            else:
+                yield {
+                    "type": "progress",
+                    "message": "검증 완료 - 문제 없음",
+                    "progress": 70,
+                    "step": "validate_plan"
+                }
+
+            # Step 4: Refinement loop (70-90%)
+            while self.should_iterate(state) == "refine":
+                iteration = state["current_iteration"]
+                yield {
+                    "type": "status",
+                    "message": f"계획을 개선하고 있습니다... (반복 {iteration})",
+                    "progress": 70 + (iteration * 5),
+                    "step": "refine_plan"
+                }
+
+                state = await self.refine_plan_node(state)
+                state = await self.validate_plan_node(state)
+
+                yield {
+                    "type": "progress",
+                    "message": f"개선 완료 (반복 {iteration})",
+                    "progress": 75 + (iteration * 5),
+                    "step": "refine_plan"
+                }
+
+            # Step 5: Finalize (90-100%)
+            yield {
+                "type": "status",
+                "message": "최종 계획을 완성하고 있습니다...",
+                "progress": 95,
+                "step": "finalize_plan"
+            }
+
+            state = await self.finalize_plan_node(state)
+            final_plan = state["final_plan"]
+
+            logger.info(f"[LangGraph Streaming] Plan generated successfully after {state['current_iteration']} iterations")
+
+            # Final complete event
+            yield {
+                "type": "complete",
+                "message": "여행 계획 생성 완료!",
+                "progress": 100,
+                "step": "finalize_plan",
+                "plan": final_plan
+            }
+
+        except Exception as e:
+            logger.error(f"[LangGraph Streaming] Error: {e}")
+            yield {
+                "type": "error",
+                "message": f"계획 생성 중 오류 발생: {str(e)}",
+                "error": str(e)
+            }
 

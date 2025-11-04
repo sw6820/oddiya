@@ -20,6 +20,10 @@ export const authService = {
     return apiClient.post(API_ENDPOINTS.SIGNUP, { name, email, password });
   },
 
+  async googleLogin(idToken: string): Promise<TokenResponse> {
+    return apiClient.post(API_ENDPOINTS.GOOGLE_LOGIN, { idToken });
+  },
+
   async oauthCallback(provider: string, code: string): Promise<TokenResponse> {
     return apiClient.post(`${API_ENDPOINTS.OAUTH_CALLBACK}/${provider}`, { code });
   },

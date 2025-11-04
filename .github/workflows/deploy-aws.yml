@@ -1,0 +1,176 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/**'
+      - 'infrastructure/terraform/phase1/**'
+      - '.github/workflows/deploy-aws.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - staging
+
+jobs:
+  deploy:
+    name: Deploy to AWS Seoul
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+          cache: 'gradle'
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Create terraform.tfvars
+        run: |
+          cd infrastructure/terraform/phase1
+          cat > terraform.tfvars << EOF
+          aws_region = "ap-northeast-2"
+          environment = "prod"
+          instance_type = "t2.micro"
+          key_pair_name = "${{ secrets.SSH_KEY_NAME }}"
+          admin_ip_whitelist = ["${{ secrets.ADMIN_IP }}/32"]
+          db_password = "${{ secrets.DB_PASSWORD }}"
+          gemini_api_key = "${{ secrets.GEMINI_API_KEY }}"
+          google_client_id = "${{ secrets.GOOGLE_CLIENT_ID }}"
+          google_client_secret = "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+          apple_client_id = "${{ secrets.APPLE_CLIENT_ID }}"
+          apple_team_id = "${{ secrets.APPLE_TEAM_ID }}"
+          apple_key_id = "${{ secrets.APPLE_KEY_ID }}"
+          apple_private_key = "${{ secrets.APPLE_PRIVATE_KEY }}"
+          EOF
+
+      - name: Terraform Init
+        run: |
+          cd infrastructure/terraform/phase1
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd infrastructure/terraform/phase1
+          terraform plan
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd infrastructure/terraform/phase1
+          terraform apply -auto-approve
+
+      - name: Get EC2 IPs
+        id: ec2-ips
+        run: |
+          cd infrastructure/terraform/phase1
+          echo "app_ip=$(terraform output -raw app_server_public_ip)" >> $GITHUB_OUTPUT
+          echo "db_ip=$(terraform output -raw db_server_private_ip)" >> $GITHUB_OUTPUT
+
+      - name: Build Plan Service
+        run: |
+          cd services/plan-service
+          chmod +x gradlew
+          ./gradlew clean build -x test
+
+      - name: Package LLM Agent
+        run: |
+          cd services/llm-agent
+          tar czf llm-agent.tar.gz src/ requirements.txt main.py
+
+      - name: Setup SSH Key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/oddiya-prod.pem
+          chmod 400 /tmp/oddiya-prod.pem
+
+      - name: Deploy Plan Service
+        run: |
+          APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
+
+          # Copy JAR
+          scp -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            services/plan-service/build/libs/plan-service-*.jar \
+            ec2-user@$APP_IP:/opt/oddiya/plan-service/app.jar || true
+
+          # Restart service
+          ssh -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            ec2-user@$APP_IP \
+            "sudo systemctl restart plan-service"
+
+      - name: Deploy LLM Agent
+        run: |
+          APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
+
+          # Copy package
+          scp -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            services/llm-agent/llm-agent.tar.gz \
+            ec2-user@$APP_IP:/tmp/ || true
+
+          # Extract and restart
+          ssh -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            ec2-user@$APP_IP << 'ENDSSH'
+          cd /opt/oddiya/llm-agent
+          tar xzf /tmp/llm-agent.tar.gz
+          source venv/bin/activate
+          pip install -r requirements.txt
+          sudo systemctl restart llm-agent
+          ENDSSH
+
+      - name: Health Check
+        run: |
+          APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
+
+          echo "Waiting for services to start..."
+          sleep 30
+
+          echo "Testing LLM Agent..."
+          curl -f http://$APP_IP:8000/health || echo "LLM Agent health check failed"
+
+          echo "Testing Plan Service..."
+          curl -f http://$APP_IP:8083/actuator/health || echo "Plan Service health check failed"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f /tmp/oddiya-prod.pem
+
+      - name: Deployment Summary
+        run: |
+          echo "### Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**App Server IP:** ${{ steps.ec2-ips.outputs.app_ip }}" >> $GITHUB_STEP_SUMMARY
+          echo "**LLM Agent:** http://${{ steps.ec2-ips.outputs.app_ip }}:8000" >> $GITHUB_STEP_SUMMARY
+          echo "**Plan Service:** http://${{ steps.ec2-ips.outputs.app_ip }}:8083" >> $GITHUB_STEP_SUMMARY

@@ -13,6 +13,10 @@ export type RootStackParamList = {
   Plans: undefined;
   Videos: undefined;
   Profile: undefined;
+
+  // Plan Management
+  CreatePlan: undefined;
+  PlanDetail: { planId: number };
 };
 
 export type AuthStackParamList = {

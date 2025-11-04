@@ -2,15 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project: Oddiya (v1.3 - Hybrid Self-Hosted)
+## Project: Oddiya (v1.3.1 - Streaming + Database Persistence)
 
-AI-powered mobile travel planner with automated short-form video generation. 8-week MVP targeting real-world deployment on AWS EKS with resource-constrained infrastructure.
+**Last Updated:** 2025-11-04
+
+AI-powered mobile travel planner with real-time streaming plan generation and database persistence.
 
 **Critical Rules:**
 1. **ALWAYS edit existing files** instead of creating new ones. Read files first before making changes.
-2. **NEVER hardcode data** - Use configuration files (YAML/JSON/properties) instead
+2. **NEVER hardcode data** - Use LLM for ALL travel content
+3. **Check current status first** - See `docs/CURRENT_IMPLEMENTATION_STATUS.md` for latest state
 
-**Documentation:** All docs are now in `docs/` directory with organized structure. See `docs/README.md` for index.
+**📋 Current Implementation:** See **[docs/CURRENT_IMPLEMENTATION_STATUS.md](docs/CURRENT_IMPLEMENTATION_STATUS.md)** for complete system state, code flows, and environment setup.
 
 ## 🚫 No Hardcoding Principle
 
@@ -65,127 +68,176 @@ prompt = prompt_loader.get_planning_prompt(location=location)
 
 ## Architecture Overview
 
-### Microservices (7 Total)
-The system uses a hybrid model: **stateless services on EKS (t3.medium Spot)**, **stateful components on dedicated EC2s (2x t2.micro)**.
+### Current Implementation (Local Development)
 
 ```
-Mobile App → ALB → Nginx Ingress → API Gateway (8080)
-                                      ├→ Auth Service (8081) → Redis (t2.micro)
-                                      ├→ User Service (8082) → PostgreSQL (t2.micro)
-                                      ├→ Plan Service (8083) → PostgreSQL + LLM Agent (8000)
-                                      └→ Video Service (8084) → SQS → Video Worker → S3/SNS
+Mobile App (React Native 0.75)
+    ↓ SSE (Server-Sent Events for streaming)
+    ↓
+LLM Agent (8000) ← FastAPI + LangChain + LangGraph
+    ├→ Google Gemini 2.0 Flash (gemini-2.0-flash-exp)
+    └→ Redis (6379) - 1hr cache
 
-All Java services: Spring Boot 3.2 + Java 21
-Python services: FastAPI (LLM Agent), Python 3.11 (Video Worker)
-Database: PostgreSQL 17.0 schema-per-service model
-Cache: Redis 7.4 for refresh tokens + LLM cache
+Mobile App (REST API)
+    ↓
+API Gateway (8080) ← Spring Cloud Gateway
+    ├→ Auth Service (8081) - OAuth 2.0
+    ├→ User Service (8082) - User CRUD
+    └→ Plan Service (8083) - Plan CRUD
+        ├→ LLM Agent (8000) - Plan generation
+        └→ PostgreSQL (5432) - Persistence
+
+Tech Stack:
+- Backend: Spring Boot 3.2 + Java 21, FastAPI + Python 3.11
+- Database: PostgreSQL 17.0 (schema-per-service)
+- Cache: Redis 7.4 (LLM cache + session)
+- Mobile: React Native 0.75 + Expo
 ```
 
 ### Critical Data Flows
 
+**✅ Real-time Streaming Plan Generation (Implemented 2025-11-04):**
+- Mobile App connects **directly to LLM Agent** (port 8000) via SSE
+- LLM Agent uses LangGraph for iterative planning
+- Progress events: status → chunk → progress → complete → done
+- Real-time progress bar (0-100%), Korean status messages
+- LLM output streams to mobile in real-time
+- **Cache Hit:** Redis returns plan instantly (<1s)
+- **Cache Miss:** Generates with streaming (~6s), saves to Redis
+
+**✅ Database Persistence (Implemented 2025-11-04):**
+- After streaming completes, Mobile App calls Plan Service REST API
+- Plan Service saves to PostgreSQL (`plan_service.travel_plans`)
+- Full CRUD implemented: Create, Read, Update, Delete
+- Plans persist across app restarts
+
 **Authentication (RS256 JWT):**
 - Auth Service generates RS256 tokens (1hr access, 14-day refresh)
-- Provides `/.well-known/jwks.json` for public key
-- API Gateway validates JWTs by fetching JWKS (cached in Redis)
-- Refresh tokens stored in Redis: `refresh_token:{uuid}` → `{user_id}`
+- API Gateway validates JWTs via JWKS
+- Refresh tokens stored in Redis
 
-**Video Generation (Async with Idempotency):**
-- Client generates UUID for `Idempotency-Key` header
-- Video Service saves job (status: PENDING) + publishes to SQS → returns 202
-- Video Worker polls SQS → checks DB status → processes (FFmpeg) → uploads to S3 → SNS push
-- NO client polling - use push notifications
-
-**AI Planning (LLM-Only Strategy - NO FALLBACK):**
-- Plan Service (Java) → LLM Agent (Python) via REST
-- LLM Agent uses **LangChain & LangGraph** for iterative planning logic
-- LangGraph → **AWS Bedrock Claude Sonnet 3.5** (anthropic.claude-3-5-sonnet-20241022-v2:0)
-- Smart prompt engineering with user preferences (destination, dates, budget, interests)
-- Comprehensive Korea travel knowledge built into Claude Sonnet
-- Responses cached in Redis (1hr TTL) for 90%+ cost savings
-- **NO hardcoded fallback** - If LLM fails, return error to user (honest UX)
-
-### Resource Constraints
-
-**⚠️ CRITICAL BOTTLENECK:** PostgreSQL on t2.micro (1GB RAM) - extremely slow, accepted for cost/learning.
-
-- EKS Node: 1x t3.medium Spot (4GB RAM) - stateless only
-- DB/Cache: 2x t2.micro (1GB RAM each) - performance bottleneck
-- Conservative resource limits: CPU 200m-500m, Memory 256Mi-512Mi
-- Security Groups: EKS nodes MUST reach t2.micro ports 5432/6379
+**⚠️ Future: Video Generation (Not Yet Implemented)**
+- Async pipeline with SQS + FFmpeg + S3
+- Idempotency with UUID keys
 
 ## Development Commands
 
-### Local Development
-```bash
-# Java services (Spring Boot)
-cd services/{service-name}
-./gradlew clean build
-./gradlew test
-./gradlew bootRun
+### Quick Start (Local Development)
 
-# Python services
+```bash
+# 1. Start LLM Agent (Python FastAPI)
+cd services/llm-agent
+source venv/bin/activate
+python main.py  # Port 8000
+
+# 2. Start Plan Service (Spring Boot)
+cd services/plan-service
+./gradlew bootRun  # Port 8083
+
+# 3. Start Database & Cache
+brew services start redis postgresql
+
+# 4. Run Mobile App
+cd mobile
+npm run ios  # iOS Simulator
+npm run android  # Android Emulator
+```
+
+### Service Health Checks
+
+```bash
+# Check all services
+curl http://localhost:8000/health        # LLM Agent
+curl http://localhost:8083/actuator/health  # Plan Service
+redis-cli ping                           # Redis → PONG
+pg_isready -h localhost -U admin         # PostgreSQL → accepting connections
+```
+
+### Java Services (Spring Boot)
+
+```bash
 cd services/{service-name}
+./gradlew clean build    # Build
+./gradlew test           # Unit tests
+./gradlew bootRun        # Run locally
+```
+
+### Python Services
+
+```bash
+cd services/llm-agent
 pip install -r requirements.txt
-pytest
-uvicorn main:app --reload  # FastAPI
-python main.py             # Worker
-
-# Docker build
-docker build -t oddiya/{service-name}:latest .
-docker-compose up  # For local dev with PostgreSQL/Redis
+pytest                    # Tests
+python main.py            # Run locally
 ```
 
-### Kubernetes Operations
+### Database Operations
+
 ```bash
-# Deploy service
-kubectl apply -f infrastructure/kubernetes/{service-name}/
+# Connect to PostgreSQL
+PGPASSWORD=4321 psql -h localhost -U admin -d oddiya
 
-# Check status
-kubectl get pods -n oddiya
-kubectl get svc -n oddiya
+# Check plan_service schema
+\dt plan_service.*
 
-# Debug
-kubectl logs -f deployment/{service-name} -n oddiya
-kubectl describe pod {pod-name} -n oddiya
-kubectl exec -it {pod-name} -n oddiya -- /bin/bash
-
-# Port forward for testing
-kubectl port-forward svc/api-gateway 8080:8080 -n oddiya
-kubectl port-forward svc/auth-service 8081:8081 -n oddiya
+# View travel plans
+SELECT id, title, start_date, end_date, created_at
+FROM plan_service.travel_plans
+ORDER BY created_at DESC LIMIT 5;
 ```
 
-### Database
-```bash
-# Connect to PostgreSQL (from bastion or EKS pod)
-psql -h 10.0.x.x -U oddiya_user -d oddiya
+### Redis Operations
 
-# Run migrations (per service)
-cd services/{service-name}/src/main/resources/db/migration
-flyway migrate  # Or use Spring Boot auto-migration
+```bash
+# Check cache
+redis-cli keys "plan:*"
+redis-cli GET "plan:Seoul:2025-11-10:2025-11-12:medium"
+redis-cli TTL "plan:Seoul:2025-11-10:2025-11-12:medium"
 ```
 
 ## Project Structure
 
 ```
 oddiya/
-├── infrastructure/
-│   ├── kubernetes/           # Deployments, Services, Ingress, HPA
-│   │   ├── api-gateway/
-│   │   ├── auth-service/
-│   │   └── ...
-│   └── terraform/            # EKS, EC2, VPC, Security Groups
-├── services/
-│   ├── api-gateway/          # Spring Cloud Gateway, JWT validation
-│   ├── auth-service/         # OAuth 2.0, RS256 JWT, JWKS endpoint
-│   ├── user-service/         # User CRUD, internal API for Auth
-│   ├── plan-service/         # Travel plan CRUD, calls LLM Agent
-│   ├── llm-agent/            # FastAPI, Bedrock, Kakao API
-│   ├── video-service/        # Job API, SQS producer, idempotency
-│   └── video-worker/         # SQS consumer, FFmpeg, S3, SNS
-├── scripts/                  # DevOps automation
-├── docs/                     # API specs, architecture diagrams
-├── TechSpecPRD.md           # Complete technical specification
-└── .cursorrules             # Detailed development guidelines
+├── docs/                           # Documentation
+│   ├── CURRENT_IMPLEMENTATION_STATUS.md  # ⭐ Latest system state
+│   ├── architecture/               # System design
+│   ├── development/                # Dev guides
+│   └── archive/                    # Historical docs
+├── services/                       # Backend services
+│   ├── llm-agent/                  # ✅ Python FastAPI + LangGraph + Gemini
+│   │   ├── src/routes/langgraph_plans.py  # SSE streaming endpoint
+│   │   ├── src/services/langgraph_planner.py  # Streaming logic
+│   │   └── static/streaming-test.html  # Web test page
+│   ├── plan-service/               # ✅ Spring Boot + JPA + PostgreSQL
+│   │   ├── src/main/java/com/oddiya/plan/
+│   │   │   ├── controller/         # REST API
+│   │   │   ├── service/            # Business logic + LLM client
+│   │   │   ├── repository/         # JPA repositories (NEW)
+│   │   │   ├── entity/             # TravelPlan, PlanDetail
+│   │   │   └── dto/                # Request/Response DTOs
+│   │   └── src/main/resources/
+│   │       └── application.yml     # DB config (JPA enabled)
+│   ├── auth-service/               # OAuth 2.0 (future)
+│   └── api-gateway/                # Gateway (future)
+├── mobile/                         # React Native app
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── services.ts         # REST API
+│   │   │   └── streaming.ts        # ✅ SSE client (NEW)
+│   │   ├── screens/
+│   │   │   ├── PlansScreen.tsx
+│   │   │   └── CreatePlanScreen.tsx  # ✅ Streaming UI (NEW)
+│   │   ├── store/slices/
+│   │   │   ├── authSlice.ts
+│   │   │   └── plansSlice.ts       # Redux state
+│   │   └── navigation/
+│   │       └── AppNavigator.tsx    # Navigation setup
+│   └── package.json
+├── scripts/                        # Automation
+├── .env                           # Environment variables
+├── README.md                      # Project overview
+└── CLAUDE.md                      # This file
 ```
 
 ### Service Structure Pattern
@@ -245,107 +297,179 @@ video_service.video_jobs (with idempotency_key UUID UNIQUE)
 
 ## Environment Variables
 
-All services require:
+### Required (Local Development)
+
 ```bash
-# Database (t2.micro PostgreSQL private IP)
-DB_HOST=10.0.x.x
+# Google Gemini (Required - FREE tier)
+GOOGLE_API_KEY=AIzaSyDlMvCLaGNMbPJXvnNkpjf_d4gOQOr5Hbk
+GEMINI_MODEL=gemini-2.0-flash-exp
+
+# Redis (Required for caching)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_CACHE_TTL=3600  # 1 hour
+
+# PostgreSQL (Required for persistence)
+DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=oddiya
 DB_USER=admin
 DB_PASSWORD=4321
-
-# Redis (t2.micro private IP)
-REDIS_HOST=10.0.x.x
-REDIS_PORT=6379
-
-# AWS
-AWS_REGION=ap-northeast-2
-S3_BUCKET=oddiya-storage
-SQS_QUEUE_URL=https://sqs.ap-northeast-2.amazonaws.com/{account}/oddiya-video-jobs
-SNS_TOPIC_ARN=arn:aws:sns:ap-northeast-2:{account}:oddiya-notifications
-
-# Bedrock (LLM Agent only) - Claude Sonnet 4.5
-BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-BEDROCK_REGION=us-east-1
-
-# OAuth (Auth Service only)
-GOOGLE_CLIENT_ID=***
-GOOGLE_CLIENT_SECRET=***
-APPLE_CLIENT_ID=***
-APPLE_PRIVATE_KEY=***
 ```
 
-## Development Priorities
+### Optional (Future Features)
 
-1. **P1: Core Flow** (Week 1-5) - OAuth Login → AI-Powered Travel Planning
-2. **P2: K8s Operations** (Week 1-2, 8) - EKS deployment + operations
-3. **P3: Video Generation** (Week 6-7) - Async video pipeline
+```bash
+# OAuth (Auth Service)
+GOOGLE_CLIENT_ID=***
+GOOGLE_CLIENT_SECRET=***
 
-### Week 1-2: Infrastructure + Auth
-- EKS cluster + 2x t2.micro EC2s (PostgreSQL/Redis)
-- Auth Service (OAuth 2.0, RS256 JWT, JWKS)
-- User Service (internal API)
-- API Gateway (JWT validation)
+# AWS (Video Service - not yet implemented)
+AWS_REGION=ap-northeast-2
+S3_BUCKET=oddiya-storage
+SQS_QUEUE_URL=https://sqs...
+SNS_TOPIC_ARN=arn:aws:sns...
+```
 
-### Week 3-5: AI Planning
-- LLM Agent (Bedrock + Kakao Local API)
-- Plan Service (CRUD + LLM integration)
-- Redis caching (1hr TTL)
+**See:** [.env.example](.env.example) for full configuration template
 
-### Week 6-7: Video Pipeline
-- Video Service (API + SQS producer)
-- Video Worker (SQS consumer + FFmpeg)
-- One template (Priority 1), SNS notifications
+## Implementation Status (2025-11-04)
 
-### Week 8: Testing + Ops
-- Locust load tests (will expose t2.micro bottleneck)
-- HPA configuration
-- Documentation
+### ✅ Completed Features
+
+1. **Real-time Streaming Plan Generation**
+   - SSE (Server-Sent Events) streaming
+   - LangGraph iterative planning
+   - Real-time progress bar (0-100%)
+   - Korean status messages
+   - LLM chunk display
+
+2. **Redis Caching**
+   - 1-hour TTL
+   - 99% cost savings
+   - Instant response (<1s) on cache hit
+
+3. **Database Persistence**
+   - PostgreSQL storage
+   - Full CRUD operations
+   - User-scoped plans
+   - Survives app restart
+
+4. **Mobile App**
+   - React Native 0.75 + Expo
+   - SSE client implementation
+   - CreatePlanScreen with streaming UI
+   - Redux state management
+
+### 🚧 Next Steps
+
+1. **PlanDetail Screen** - View full plan details
+2. **Plan Edit/Delete UI** - Update/remove plans
+3. **Error Handling** - Network errors, LLM failures
+4. **OAuth Integration** - Complete authentication
+5. **Video Generation** - Async video pipeline (future)
 
 ## Testing
 
+### Quick Tests
+
 ```bash
-# Unit tests
-./gradlew test                    # Spring Boot
-pytest                            # Python
+# Service health
+curl http://localhost:8000/health
+curl http://localhost:8083/actuator/health
+redis-cli ping
+pg_isready
 
-# Integration tests (with Testcontainers)
-./gradlew integrationTest
+# API test (plan generation)
+curl -X POST http://localhost:8083/api/v1/plans \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: 1" \
+  -d '{"destination":"Seoul","startDate":"2025-11-10","endDate":"2025-11-12","budget":100000}'
 
-# Load tests
-cd tests/load
-locust -f locustfile.py --host=http://api.oddiya.com
+# Mobile app test
+cd mobile && npm run ios
+# Then: Plans → "+ New Plan" → Fill form → Generate
+```
+
+### Unit Tests
+
+```bash
+# Spring Boot
+cd services/plan-service
+./gradlew test
+
+# Python
+cd services/llm-agent
+pytest
 ```
 
 ## Important Implementation Details
 
-1. **API Gateway JWT Validation:** Fetches JWKS from Auth Service `/.well-known/jwks.json`, caches public key in Redis
-2. **User Service Internal API:** `POST /internal/users` only called by Auth Service during OAuth callback
-3. **Video Idempotency:** Client generates UUID, Video Service checks DB before SQS publish, Worker checks before processing
-4. **Service Communication:** Internal REST calls use K8s Service DNS (e.g., `http://user-service:8082`)
-5. **Database Connection Pooling:** Keep pool size low due to t2.micro RAM constraints
-6. **Spot Instance Handling:** t3.medium may terminate, use node affinity for critical workloads
-7. **External API Priority:** Kakao Local (P1), OpenWeatherMap/ExchangeRate (P2 - if time permits)
+### Current (v1.3.1)
+
+1. **Direct SSE Connection:** Mobile app connects directly to LLM Agent (port 8000) for streaming, bypassing API Gateway for performance
+
+2. **Two-Step Save:** Streaming completes → Mobile calls Plan Service REST API → Saves to PostgreSQL
+
+3. **Cache Strategy:** Redis key format `plan:{location}:{startDate}:{endDate}:{budget}`, 1-hour TTL
+
+4. **Database Schema:** `plan_service.travel_plans` + `plan_service.plan_details` with foreign key relationship
+
+5. **Timer Bug Fixed:** Used `startTimestamp` constant instead of recalculating `Date.now()` each interval
+
+6. **Budget Mapping:** Mobile converts level (low/medium/high) to daily amount (50k/100k/200k) × days
+
+### Future
+
+7. **JWT Validation:** API Gateway will validate JWTs via JWKS from Auth Service
+8. **Video Idempotency:** UUID-based idempotency keys for video generation
+9. **External APIs:** No external APIs currently used (Kakao removed, using Gemini only)
 
 ## Git Strategy
 
 - Commit by feature/module for easy rollback
-- Test locally (Docker Compose) before K8s deployment
-- Branch naming: `feature/{service}-{feature}`, `infra/{component}`
+- Test locally before pushing
+- Branch naming: `feature/{service}-{feature}`, `fix/{issue}`
 
-## References
+## Key References
 
-- **[Architecture Overview](docs/architecture/overview.md)** - Complete technical specification with architecture diagrams
-- **[Development Plan](docs/development/plan.md)** - Detailed phased development strategy
-- **[Testing Guide](docs/development/testing.md)** - Testing standards and practices
-- **[.cursorrules](.cursorrules)** - Detailed coding guidelines and patterns
+### ⭐ Start Here
+- **[Current Implementation Status](docs/CURRENT_IMPLEMENTATION_STATUS.md)** - Complete system state, all flows, environment setup
+
+### Recent Implementations (2025-11-04)
+- **[Database Persistence](DATABASE_PERSISTENCE_COMPLETE.md)** - PostgreSQL integration details
+- **[Mobile Streaming Test](MOBILE_STREAMING_TEST_GUIDE.md)** - Mobile app testing guide
+- **[Quick Test Summary](READY_TO_TEST_SUMMARY.md)** - Fast test checklist
+
+### Development Guides
+- **[No Hardcoding Guide](docs/development/NO_HARDCODING_GUIDE.md)** - LLM-first development
+- **[Environment Variables](docs/development/ENVIRONMENT_VARIABLES.md)** - Configuration guide
+- **[OAuth Setup](docs/development/OAUTH_ONLY_SETUP.md)** - Google/Apple OAuth
+
+### API & Architecture
+- **[Architecture Overview](docs/architecture/overview.md)** - System design
+- **[Mobile API Testing](docs/api/MOBILE_API_TESTING.md)** - API reference
+
+### Change History
+- **[CHANGELOG_2025-11-04.md](CHANGELOG_2025-11-04.md)** - Today's changes
+- **[docs/archive/](docs/archive/)** - Historical documents
 
 ## Documentation Structure
 
-All documentation is organized in the `docs/` directory:
+```
+docs/
+├── CURRENT_IMPLEMENTATION_STATUS.md  # ⭐ Main reference
+├── README.md                         # Documentation index
+├── architecture/                     # System design
+├── development/                      # Development guides
+├── deployment/                       # CI/CD guides
+├── api/                             # API references
+└── archive/                         # Historical docs
+    └── 2025-11-04-streaming-implementation/
+```
 
-- `docs/architecture/` - System design and architecture
-- `docs/development/` - Development guides and plans
-- `docs/deployment/` - CI/CD and infrastructure deployment
-- `docs/api/` - API integrations and external services
-- `docs/archive/` - Historical progress tracking documents
+---
+
+**Last Updated:** 2025-11-04
+**Version:** v1.3.1
+**Status:** ✅ Streaming + Database Persistence Complete

@@ -1,0 +1,22 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and fill in your values
+
+# Region - Seoul (ap-northeast-2)
+aws_region = "ap-northeast-2"
+environment = "prod"
+instance_type = "t2.micro"
+
+# SSH key pair (create this in AWS EC2 console first)
+# Must create in ap-northeast-2 region!
+key_pair_name = "oddiya-prod"
+
+# Security: Replace with your actual IP address
+# Find your IP: curl ifconfig.me
+admin_ip_whitelist = ["YOUR_IP_ADDRESS/32"]
+
+# Secrets (DO NOT commit terraform.tfvars to git)
+# Database password: 16+ characters, mix of upper/lower/numbers/symbols
+db_password = "CHANGE_THIS_TO_SECURE_PASSWORD"
+
+# Gemini API key: Get from https://ai.google.dev/
+gemini_api_key = "YOUR_GEMINI_API_KEY"

@@ -4,24 +4,28 @@ server:
 spring:
   application:
     name: plan-service
-  
-  config:
-    import:
-      - optional:aws-secretsmanager:oddiya/plan-service/db
-  
+
+  # Database configuration
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:oddiya}?currentSchema=plan_service
-    username: ${DB_USER:oddiya_user}
-    password: ${DB_PASSWORD:oddiya_password_dev}
+    username: ${DB_USER:admin}
+    password: ${DB_PASSWORD:4321}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
+        format_sql: true
         default_schema: plan_service
+        jdbc:
+          batch_size: 20
 
 # LLM Agent configuration
 llm:

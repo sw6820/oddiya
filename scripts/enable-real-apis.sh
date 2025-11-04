@@ -33,29 +33,27 @@ echo ""
 # Check environment variables
 MISSING=0
 
-if [ -z "$AWS_ACCESS_KEY_ID" ]; then
-    print_error "AWS_ACCESS_KEY_ID not set"
-    ((MISSING++))
-fi
-
-if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-    print_error "AWS_SECRET_ACCESS_KEY not set"
+if [ -z "$GOOGLE_API_KEY" ]; then
+    print_error "GOOGLE_API_KEY not set (for Gemini AI)"
     ((MISSING++))
 fi
 
 if [ -z "$OPENWEATHER_API_KEY" ]; then
-    print_error "OPENWEATHER_API_KEY not set"
-    ((MISSING++))
+    print_info "OPENWEATHER_API_KEY not set (optional)"
 fi
 
 if [ $MISSING -gt 0 ]; then
     echo ""
     print_error "$MISSING required environment variables missing"
     echo ""
-    echo "Set them first:"
-    echo "  export AWS_ACCESS_KEY_ID=your-key"
-    echo "  export AWS_SECRET_ACCESS_KEY=your-secret"
-    echo "  export OPENWEATHER_API_KEY=your-key"
+    echo "Set Google Gemini API key:"
+    echo "  export GOOGLE_API_KEY=your-gemini-key"
+    echo ""
+    echo "Get your FREE Gemini API key from:"
+    echo "  https://makersuite.google.com/app/apikey"
+    echo ""
+    echo "Optional APIs:"
+    echo "  export OPENWEATHER_API_KEY=your-weather-key"
     echo ""
     echo "Then run this script again"
     exit 1
@@ -71,25 +69,28 @@ cat > .env.local << EOF
 # Real API Configuration
 ENVIRONMENT=development
 
-# AWS Bedrock (REAL)
-AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-AWS_REGION=ap-northeast-2
-BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
+# Google Gemini (PRIMARY LLM)
+LLM_PROVIDER=gemini
+GOOGLE_API_KEY=$GOOGLE_API_KEY
+GEMINI_MODEL=gemini-2.0-flash-exp
 
-# External APIs (REAL - OpenWeather only)
-OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY
+# External APIs (Optional)
+OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-}
+EXCHANGERATE_API_KEY=${EXCHANGERATE_API_KEY:-}
 
-# LangSmith (Optional)
+# LangSmith (Optional - for LLM tracing)
 LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
 LANGSMITH_PROJECT=oddiya-development
+LANGCHAIN_TRACING_V2=false
 
 # IMPORTANT: Real APIs enabled
-MOCK_MODE=false
+USE_BEDROCK_MOCK=false
 
 # Infrastructure
 DB_HOST=postgres
 REDIS_HOST=redis
+REDIS_PORT=6379
+CACHE_TTL=3600
 EOF
 
 print_success ".env.local created"
@@ -124,16 +125,16 @@ echo "✅ REAL APIS ENABLED!"
 echo "════════════════════════════════════════"
 echo ""
 echo "Now when you create a plan, it will use:"
-echo "  🤖 AWS Bedrock (Claude Sonnet - has Korea knowledge)"
-echo "  🌤️ OpenWeatherMap (Real weather forecast)"
+echo "  🤖 Google Gemini 2.0 Flash (FREE tier - Korea knowledge)"
+echo "  🌤️ OpenWeatherMap (Real weather forecast - optional)"
 echo ""
-echo "Test at: http://172.16.102.149:8080/app"
+echo "Test at: http://localhost:8080"
 echo ""
 echo "Create a new plan and see:"
-echo "  ✅ Real Seoul attractions"
-echo "  ✅ Real weather forecast"
-echo "  ✅ AI-generated detailed itinerary"
+echo "  ✅ Real Korean attractions (Seoul, Busan, Jeju, etc.)"
+echo "  ✅ Real weather forecast (if API key provided)"
+echo "  ✅ AI-generated detailed itinerary from Gemini"
 echo ""
-print_success "Ready to create real AI plans!"
+print_success "Ready to create real AI travel plans!"
 echo ""
 

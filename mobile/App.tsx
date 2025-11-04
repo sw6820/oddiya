@@ -4,12 +4,19 @@ import { Provider, useDispatch } from 'react-redux';
 import { store, AppDispatch } from './src/store';
 import { loadStoredAuth } from './src/store/slices/authSlice';
 import AppNavigator from './src/navigation/AppNavigator';
+import { googleSignInService } from './src/services/googleSignInService';
+
+// TODO: Replace with your Web Client ID from Google Cloud Console
+const GOOGLE_WEB_CLIENT_ID = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
 
 function AppContent(): JSX.Element {
   const dispatch = useDispatch<AppDispatch>();
   const [isInitializing, setIsInitializing] = React.useState(true);
 
   useEffect(() => {
+    // Initialize Google Sign-In
+    googleSignInService.configure(GOOGLE_WEB_CLIENT_ID);
+
     // Try to load stored authentication on app startup
     const initializeAuth = async () => {
       try {

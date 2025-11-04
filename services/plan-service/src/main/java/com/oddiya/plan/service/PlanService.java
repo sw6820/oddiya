@@ -7,47 +7,63 @@ import com.oddiya.plan.exception.LlmServiceException;
 import com.oddiya.plan.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Plan Service - Generates plans via LLM Agent and persists to database.
+ * All planning logic is handled by Python LLM Agent.
+ * Java service saves/retrieves plans from PostgreSQL.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlanService {
-    private final TravelPlanRepository planRepository;
     private final LlmAgentClient llmAgentClient;
+    private final TravelPlanRepository travelPlanRepository;
 
-    @Transactional
+    @Value("${llm.agent.base-url}")
+    private String llmAgentBaseUrl;
+
+    /**
+     * Create travel plan by calling Python LLM Agent and save to database.
+     */
     public Mono<PlanResponse> createPlan(Long userId, CreatePlanRequest request) {
-        log.info("[PlanService] Creating plan for user={}, title='{}', dates={} to {}",
-            userId, request.getTitle(), request.getStartDate(), request.getEndDate());
+        log.info("[PlanService] Creating plan for user={}, destination='{}'",
+            userId, request.getDestination());
 
-        // LLM-Only Architecture: No fallback to hardcoded data
+        // Forward request to Python LLM Agent
         LlmRequest llmRequest = new LlmRequest();
-        llmRequest.setTitle(request.getTitle());
+        llmRequest.setLocation(request.getDestination());
         llmRequest.setStartDate(request.getStartDate().toString());
         llmRequest.setEndDate(request.getEndDate().toString());
-        llmRequest.setBudget("medium");  // Default budget
-        llmRequest.setLocation(extractLocationFromTitle(request.getTitle()));
+        llmRequest.setBudget(request.getBudget() != null ? String.valueOf(request.getBudget()) : null);
 
-        log.debug("[PlanService] Calling LLM Agent with location={}, budget={}",
-            llmRequest.getLocation(), llmRequest.getBudget());
+        log.debug("[PlanService] → Python LLM Agent: {}", llmRequest);
 
+        // Call Python LLM Agent and save result to database
         return llmAgentClient.generatePlan(llmRequest)
-                .doOnSuccess(response ->
-                    log.debug("[PlanService] LLM Agent returned plan with {} days",
-                        response.getDays() != null ? response.getDays().size() : 0))
-                .map(llmResponse -> {
+                .flatMap(llmResponse -> {
+                    log.info("[PlanService] ← Python LLM Agent returned plan: {} days",
+                        llmResponse.getDays() != null ? llmResponse.getDays().size() : 0);
+
+                    // Create entity from LLM response
                     TravelPlan plan = new TravelPlan();
                     plan.setUserId(userId);
-                    plan.setTitle(llmResponse.getTitle() != null ? llmResponse.getTitle() : request.getTitle());
+                    plan.setTitle(llmResponse.getTitle());
                     plan.setStartDate(request.getStartDate());
                     plan.setEndDate(request.getEndDate());
+                    plan.setBudgetLevel(request.getBudget() != null ? String.valueOf(request.getBudget()) : "medium");
+                    plan.setStatus("DRAFT");
+                    plan.setCreatedAt(LocalDateTime.now());
+                    plan.setUpdatedAt(LocalDateTime.now());
 
+                    // Add plan details
                     if (llmResponse.getDays() != null) {
                         List<PlanDetail> details = llmResponse.getDays().stream()
                                 .map(dayPlan -> {
@@ -56,131 +72,160 @@ public class PlanService {
                                     detail.setDay(dayPlan.getDay());
                                     detail.setLocation(dayPlan.getLocation());
                                     detail.setActivity(dayPlan.getActivity());
+                                    detail.setCreatedAt(LocalDateTime.now());
                                     return detail;
                                 })
                                 .collect(Collectors.toList());
                         plan.setDetails(details);
                     }
 
-                    TravelPlan savedPlan = planRepository.save(plan);
-                    log.info("[PlanService] Plan created successfully: id={}, userId={}, days={}",
-                        savedPlan.getId(), userId, savedPlan.getDetails().size());
-                    return PlanResponse.fromEntity(savedPlan);
+                    // Save to database in background thread
+                    return Mono.fromCallable(() -> {
+                        TravelPlan savedPlan = travelPlanRepository.save(plan);
+                        log.info("[PlanService] ✅ Plan saved to database: id={}", savedPlan.getId());
+                        return convertToResponse(savedPlan);
+                    });
                 })
                 .onErrorResume(error -> {
-                    // LLM-Only: Return meaningful error instead of fake data
-                    log.error("[PlanService] LLM Agent failed for user {}: {}", userId, error.getMessage(), error);
+                    log.error("[PlanService] Failed to create plan: {}", error.getMessage());
                     return Mono.error(new LlmServiceException(
-                        "LLM Agent failed to generate travel plan", error
+                        "Failed to generate plan via LLM Agent", error
                     ));
                 });
     }
 
     /**
-     * Extract location from title for LLM context.
-     * This is just for passing to LLM - Claude will handle all location-specific data.
+     * Get all plans for a user from database.
      */
-    private String extractLocationFromTitle(String title) {
-        // Simple extraction: first word is usually the location
-        String[] words = title.split(" ");
-        if (words.length > 0) {
-            return words[0].trim();
-        }
-        return title;  // Use full title if no spaces
-    }
-
     public List<PlanResponse> getUserPlans(Long userId) {
-        log.debug("[PlanService] Fetching plans for user={}", userId);
-        List<PlanResponse> plans = planRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(PlanResponse::fromEntity)
+        log.info("[PlanService] Fetching all plans for user={}", userId);
+        List<TravelPlan> plans = travelPlanRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        log.info("[PlanService] Found {} plans for user={}", plans.size(), userId);
+
+        return plans.stream()
+                .map(this::convertToResponse)
                 .collect(Collectors.toList());
-        log.info("[PlanService] Retrieved {} plans for user={}", plans.size(), userId);
-        return plans;
     }
 
+    /**
+     * Get a specific plan by ID.
+     */
     public PlanResponse getPlan(Long planId, Long userId) {
-        log.debug("[PlanService] Fetching plan: id={}, userId={}", planId, userId);
-        TravelPlan plan = planRepository.findById(planId)
-                .orElseThrow(() -> {
-                    log.warn("[PlanService] Plan not found: id={}", planId);
-                    return new RuntimeException("Plan not found");
-                });
+        log.info("[PlanService] Fetching plan id={} for user={}", planId, userId);
+        TravelPlan plan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found: " + planId));
 
         if (!plan.getUserId().equals(userId)) {
-            log.warn("[PlanService] Unauthorized access attempt: planId={}, userId={}, ownerId={}",
-                planId, userId, plan.getUserId());
-            throw new RuntimeException("Unauthorized access to plan");
+            throw new RuntimeException("Unauthorized access to plan " + planId);
         }
 
-        log.info("[PlanService] Plan retrieved: id={}, userId={}", planId, userId);
-        return PlanResponse.fromEntity(plan);
+        return convertToResponse(plan);
     }
 
-    @Transactional
+    /**
+     * Update a plan (dates, destination, etc).
+     */
     public PlanResponse updatePlan(Long planId, Long userId, CreatePlanRequest request) {
-        TravelPlan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        log.info("[PlanService] Updating plan id={} for user={}", planId, userId);
+        TravelPlan plan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found: " + planId));
 
         if (!plan.getUserId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to plan");
+            throw new RuntimeException("Unauthorized access to plan " + planId);
         }
 
-        plan.setTitle(request.getTitle());
         plan.setStartDate(request.getStartDate());
         plan.setEndDate(request.getEndDate());
+        plan.setUpdatedAt(LocalDateTime.now());
 
-        TravelPlan updatedPlan = planRepository.save(plan);
-        return PlanResponse.fromEntity(updatedPlan);
+        TravelPlan updatedPlan = travelPlanRepository.save(plan);
+        return convertToResponse(updatedPlan);
     }
 
-    @Transactional
+    /**
+     * Delete a plan.
+     */
     public void deletePlan(Long planId, Long userId) {
-        TravelPlan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        log.info("[PlanService] Deleting plan id={} for user={}", planId, userId);
+        TravelPlan plan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found: " + planId));
 
         if (!plan.getUserId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to plan");
+            throw new RuntimeException("Unauthorized access to plan " + planId);
         }
 
-        planRepository.delete(plan);
+        travelPlanRepository.delete(plan);
+        log.info("[PlanService] ✅ Plan deleted: id={}", planId);
     }
-    
-    @Transactional
+
+    /**
+     * Confirm a plan (change status to CONFIRMED).
+     */
     public PlanResponse confirmPlan(Long planId, Long userId) {
-        TravelPlan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        log.info("[PlanService] Confirming plan id={} for user={}", planId, userId);
+        TravelPlan plan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found: " + planId));
 
         if (!plan.getUserId().equals(userId)) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException("Unauthorized access to plan " + planId);
         }
 
         plan.setStatus("CONFIRMED");
-        plan.setConfirmedAt(java.time.LocalDateTime.now());
+        plan.setConfirmedAt(LocalDateTime.now());
+        plan.setUpdatedAt(LocalDateTime.now());
 
-        TravelPlan updated = planRepository.save(plan);
-        return PlanResponse.fromEntity(updated);
+        TravelPlan confirmedPlan = travelPlanRepository.save(plan);
+        return convertToResponse(confirmedPlan);
     }
-    
-    @Transactional
+
+    /**
+     * Complete a plan (change status to COMPLETED).
+     */
     public PlanResponse completePlan(Long planId, Long userId) {
-        TravelPlan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        log.info("[PlanService] Completing plan id={} for user={}", planId, userId);
+        TravelPlan plan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Plan not found: " + planId));
 
         if (!plan.getUserId().equals(userId)) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException("Unauthorized access to plan " + planId);
         }
 
         plan.setStatus("COMPLETED");
-        plan.setCompletedAt(java.time.LocalDateTime.now());
+        plan.setCompletedAt(LocalDateTime.now());
+        plan.setUpdatedAt(LocalDateTime.now());
 
-        TravelPlan updated = planRepository.save(plan);
-        return PlanResponse.fromEntity(updated);
+        TravelPlan completedPlan = travelPlanRepository.save(plan);
+        return convertToResponse(completedPlan);
     }
-    
-    public List<String> getPhotoUrls(Long planId) {
-        // Photos는 별도 PhotoService에서 조회
-        // TravelPlan과 decoupled됨
-        return new java.util.ArrayList<>();  // Empty list, PhotoService에서 처리
+
+    /**
+     * Helper method to convert entity to response DTO.
+     */
+    private PlanResponse convertToResponse(TravelPlan plan) {
+        PlanResponse response = new PlanResponse();
+        response.setId(plan.getId());
+        response.setUserId(plan.getUserId());
+        response.setTitle(plan.getTitle());
+        response.setStartDate(plan.getStartDate());
+        response.setEndDate(plan.getEndDate());
+        response.setCreatedAt(plan.getCreatedAt());
+        response.setUpdatedAt(plan.getUpdatedAt());
+
+        if (plan.getDetails() != null && !plan.getDetails().isEmpty()) {
+            List<PlanDetailResponse> detailResponses = plan.getDetails().stream()
+                    .map(detail -> {
+                        PlanDetailResponse detailResponse = new PlanDetailResponse();
+                        detailResponse.setId(detail.getId());
+                        detailResponse.setDay(detail.getDay());
+                        detailResponse.setLocation(detail.getLocation());
+                        detailResponse.setActivity(detail.getActivity());
+                        return detailResponse;
+                    })
+                    .collect(Collectors.toList());
+            response.setDetails(detailResponses);
+        }
+
+        return response;
     }
 }
 

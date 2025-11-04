@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
     List<TravelPlan> findByUserIdOrderByCreatedAtDesc(Long userId);
-}
 
+    List<TravelPlan> findByUserIdAndStatusOrderByCreatedAtDesc(Long userId, String status);
+}

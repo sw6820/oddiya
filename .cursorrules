@@ -1,209 +1,323 @@
 # Oddiya Project - System Prompt
 
+**Version:** v1.3.1 - Streaming + Database Persistence
+**Last Updated:** 2025-11-04
+**Status:** ✅ Real-time streaming and database persistence implemented
+
 ## Critical Rules
-1. **ALWAYS EDIT EXISTING FILES** - Never create new files unless absolutely necessary or explicitly requested
-2. **READ BEFORE WRITE** - Always use Read tool to check existing files before making changes
-3. **PREFER UPDATES** - When adding features, update existing files rather than creating new ones
-4. **NO DUPLICATE FILES** - Check for existing implementations before creating new files
-5. **NEVER HARDCODE** - Always use configuration files (YAML/JSON/properties) for data
-   - ❌ NO switch/case for data
-   - ❌ NO if/else chains for configuration
+1. **CHECK CURRENT STATUS FIRST** - Read `docs/CURRENT_IMPLEMENTATION_STATUS.md` before making changes
+2. **ALWAYS EDIT EXISTING FILES** - Never create new files unless absolutely necessary or explicitly requested
+3. **READ BEFORE WRITE** - Always use Read tool to check existing files before making changes
+4. **PREFER UPDATES** - When adding features, update existing files rather than creating new ones
+5. **NO DUPLICATE FILES** - Check for existing implementations before creating new files
+6. **NEVER HARDCODE** - Use LLM for ALL travel content, configuration files for settings
+   - ❌ NO switch/case for travel data
+   - ❌ NO if/else chains for destinations/activities
    - ❌ NO inline strings for content (prompts, messages, activities)
-   - ✅ USE external configuration files
-   - ✅ USE database for dynamic data
-   - ✅ USE property files for settings
+   - ❌ NO hardcoded restaurant/activity names in YAML files
+   - ✅ USE LLM (Gemini) for ALL travel content generation
+   - ✅ USE external configuration files for prompts only
+   - ✅ USE database for storing generated plans
+   - ✅ USE Redis for caching LLM responses
 
 ## Project Overview
-- **Name:** Oddiya (v1.3 - Hybrid Self-Hosted)
-- **Mission:** AI-powered mobile travel planner with automated short-form video generation
-- **Timeline:** 8-Week MVP Development
-- **Documentation:** See `docs/` directory for all documentation
-- **Architecture:** See `docs/architecture/overview.md` for full specification
+- **Name:** Oddiya (v1.3.1)
+- **Mission:** AI-powered mobile travel planner with real-time streaming
+- **Current Phase:** Local Development → MVP Testing
+- **Documentation:** See `docs/CURRENT_IMPLEMENTATION_STATUS.md` for latest status
+- **Architecture:** Local development with Python FastAPI + Spring Boot + React Native
 
-## Development Priorities (In Order)
-1. **P1: Core Flow** - OAuth Login → AI-Powered Travel Planning
-2. **P2: K8s Operations** - Deploying stateless microservices on EKS
-3. **P3: Video Generation** - Asynchronous video processing pipeline
+## Implementation Status (✅ = Complete, ⏳ = In Progress, ⬜ = Planned)
+
+### Completed Features
+- ✅ **Real-time Streaming (SSE)** - ChatGPT-style progressive display (2025-11-04)
+- ✅ **Redis Caching** - 1-hour TTL, 99% cost savings (2025-11-04)
+- ✅ **Database Persistence** - PostgreSQL storage with JPA (2025-11-04)
+- ✅ **LLM-Only Architecture** - Google Gemini 2.0 Flash (Free tier)
+- ✅ **Mobile App** - React Native 0.75 with SSE client
+- ✅ **Plan CRUD** - Create, Read, Update, Delete implemented
+
+### Next Steps
+- ⬜ PlanDetail screen (mobile)
+- ⬜ Error handling improvements
+- ⬜ OAuth authentication completion
+- ⬜ Video generation (future)
 
 ## Core Technology Stack
 
-### Backend Services
-- **Java Services:** Spring Boot 3.2, Java 21, Spring Cloud Gateway, Spring Security
-- **Python Services:** FastAPI (LLM Agent), Python 3.11 (Video Worker)
+### Current Setup (Local Development)
+- **Backend:** Spring Boot 3.2 (Java 21) + Python FastAPI 0.104
+- **AI Engine:** Google Gemini 2.0 Flash (via direct API, NOT Bedrock)
+- **AI Framework:** LangChain + LangGraph for iterative planning
+- **Database:** PostgreSQL 17.0 (localhost:5432)
+- **Cache:** Redis 7.4 (localhost:6379)
+- **Mobile:** React Native 0.75 + Expo + Redux Toolkit
+- **Streaming:** Server-Sent Events (SSE) protocol
 
-### Infrastructure
-- **Orchestration:** AWS EKS (Kubernetes 1.28)
-- **Compute:** 1x EC2 t3.medium (Spot Instance) for K8s workloads
-- **Database:** PostgreSQL 17.0 on dedicated t2.micro EC2 (⚠️ 1GB RAM bottleneck)
-- **Cache:** Redis 7.4 on dedicated t2.micro EC2
-- **Storage:** AWS S3
-- **Messaging:** AWS SQS (Standard Queue + DLQ)
-- **AI:** AWS Bedrock (Claude Sonnet)
-- **Notifications:** AWS SNS
+### Infrastructure (Current)
+- **Development:** Local MacOS (all services running directly)
+- **Database:** PostgreSQL 17.0 with schema-per-service
+- **Cache:** Redis 7.4 for LLM response caching (1hr TTL)
+- **AI:** Google Gemini API (free tier, no Bedrock)
+- **Future:** AWS EKS deployment planned
 
 ### External APIs
-- **NONE** - Using LLM-only strategy for MVP
-- AWS Bedrock (Claude Sonnet) provides sufficient Korea travel knowledge
+- **NONE** - Pure LLM-only strategy
+- Google Gemini 2.0 Flash provides all travel content dynamically
+- NO hardcoded destinations, activities, or restaurants
 
-## Architecture: 7 Microservices
+## Current Architecture (Local Development)
 
-### 1. API Gateway (Spring Cloud Gateway)
-- Single entry point for mobile traffic
-- Routes requests, rate limiting
-- Validates RS256 JWTs using public key from Auth Service's `/jwks.json`
-- Port: 8080
+### System Flow
+```
+Mobile App (React Native 0.75)
+    ↓ SSE (Server-Sent Events)
+LLM Agent (8000) ← Python FastAPI + LangChain + Gemini
+    ↓ Redis Cache Check
+Redis (6379) ← 1-hour TTL caching
+    ↓ (on cache miss)
+Plan Service (8083) ← Spring Boot + JPA
+    ↓
+PostgreSQL (5432) ← Persistent storage
+```
 
-### 2. Auth Service (Spring Boot)
-- OAuth 2.0 (Google, Apple)
-- Generates RS256 Access Tokens (1hr) and Refresh Tokens (14 days)
-- Stores refresh tokens in t2.micro Redis
-- Provides `/.well-known/jwks.json` endpoint
-- Port: 8081
+### Running Services (Currently Active)
 
-### 3. User Service (Spring Boot)
-- User profile CRUD: `GET /users/me`, `PATCH /users/me`
-- Internal API: `POST /internal/users` (called by Auth Service only)
-- Connects to t2.micro PostgreSQL
-- Port: 8082
+**1. LLM Agent (FastAPI)** - Port 8000 ✅ Running
+- **Real-time Streaming:** SSE endpoint `/api/v1/plans/generate/stream`
+- **AI Engine:** Google Gemini 2.0 Flash (gemini-2.0-flash-exp)
+- **Framework:** LangChain + LangGraph for iterative planning
+- **Caching:** Redis with 1-hour TTL (cache key: `plan:{location}:{startDate}:{endDate}:{budget}`)
+- **Performance:** First generation ~6s, cached <1s
+- **Prompts:** Externalized in YAML files
+- **NO hardcoded data** - All content generated by LLM
 
-### 4. Plan Service (Spring Boot)
-- Travel plan CRUD operations
-- Calls LLM Agent via synchronous REST for AI recommendations
-- Connects to t2.micro PostgreSQL
-- Port: 8083
+**2. Plan Service (Spring Boot)** - Port 8083 ✅ Running
+- **Database:** JPA + PostgreSQL for persistence
+- **Repositories:** TravelPlanRepository, PlanDetailRepository
+- **CRUD Operations:** Create, Read, Update, Delete, Complete
+- **REST API:** `/api/v1/plans` endpoints
+- **User Association:** Plans tied to user_id
+- **Schema:** `plan_service.travel_plans`, `plan_service.plan_details`
 
-### 5. LLM Agent (FastAPI)
-- **LLM-Only Strategy**: Direct AWS Bedrock Claude Sonnet invocation
-- No external API calls - uses Claude's built-in Korea travel knowledge
-- Smart prompt engineering with user preferences (dates, budget, interests)
-- Caches responses in t2.micro Redis (1hr TTL) for cost optimization
-- Port: 8000
-- **Advantages**: Faster response, lower cost, no external API dependencies
+**3. PostgreSQL** - Port 5432 ✅ Running
+- **Version:** 17.0
+- **Database:** oddiya
+- **Schemas:** auth_service, user_service, plan_service, video_service
+- **Connection:** `jdbc:postgresql://localhost:5432/oddiya?currentSchema=plan_service`
 
-### 6. Video Service (Spring Boot)
-- Video job lifecycle management
-- Idempotency via `Idempotency-Key` header
-- Publishes jobs to AWS SQS
-- Returns `202 Accepted` with job_id
-- Connects to t2.micro PostgreSQL
-- Port: 8084
+**4. Redis** - Port 6379 ✅ Running
+- **Version:** 7.4
+- **Usage:** LLM response caching (1-hour TTL)
+- **Cache Hit Rate:** ~90%+ (significant cost savings)
 
-### 7. Video Worker (Python)
-- Long-polls SQS queue
-- Downloads photos from S3
-- Generates video using FFmpeg (start with 1 template)
-- Uploads MP4 to S3
-- Triggers AWS SNS push notifications
-- Connects to t2.micro PostgreSQL
+### Services Not Yet Running (Planned)
+- ⬜ API Gateway (8080) - Future integration layer
+- ⬜ Auth Service (8081) - OAuth 2.0 implementation in progress
+- ⬜ User Service (8082) - Basic user management
+- ⬜ Video Service (8084) - Future feature
+- ⬜ Video Worker - Future feature
 
-## Database Schema (PostgreSQL 17.0)
+## Database Schema (PostgreSQL 17.0) - Current
 
-### Schema-per-Service Model
+### Schema-per-Service Model (Currently Implemented)
+
 ```sql
--- user_service.users
-CREATE TABLE user_service.users (
-    id BIGSERIAL PRIMARY KEY,
-    email VARCHAR NOT NULL,
-    name VARCHAR NOT NULL,
-    provider VARCHAR NOT NULL,
-    provider_id VARCHAR NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- plan_service.travel_plans
+-- plan_service.travel_plans (✅ IMPLEMENTED)
 CREATE TABLE plan_service.travel_plans (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    title VARCHAR NOT NULL,
+    title VARCHAR(255) NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
+    budget_level VARCHAR(20),  -- LOW, MEDIUM, HIGH
+    status VARCHAR(20) DEFAULT 'PENDING',  -- PENDING, CONFIRMED, COMPLETED, CANCELLED
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- plan_service.plan_details
+-- plan_service.plan_details (✅ IMPLEMENTED)
 CREATE TABLE plan_service.plan_details (
     id BIGSERIAL PRIMARY KEY,
-    plan_id BIGINT NOT NULL,
-    day INT NOT NULL,
-    location VARCHAR NOT NULL,
+    plan_id BIGINT NOT NULL REFERENCES plan_service.travel_plans(id),
+    day INTEGER NOT NULL,
+    location VARCHAR(255) NOT NULL,
     activity TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- video_service.video_jobs
-CREATE TABLE video_service.video_jobs (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    status VARCHAR NOT NULL, -- PENDING, PROCESSING, COMPLETED, FAILED
-    photo_urls TEXT[],
-    template VARCHAR,
-    video_url VARCHAR,
-    idempotency_key UUID UNIQUE NOT NULL, -- Client-provided
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    CONSTRAINT fk_plan FOREIGN KEY (plan_id)
+        REFERENCES plan_service.travel_plans(id) ON DELETE CASCADE
 );
 ```
 
-## Key Implementation Patterns
+### Future Schemas (Not Yet Implemented)
 
-### Authentication Flow (RS256 JWT)
-1. Mobile app initiates OAuth (`GET /oauth2/authorize/{provider}`)
-2. Auth Service redirects to provider (Google/Apple)
-3. Mobile app receives authorization code
-4. Mobile app sends code to `POST /oauth2/callback/{provider}`
-5. Auth Service exchanges code, creates/fetches user (calls User Service internal API)
-6. Auth Service generates RS256 Access Token (1hr) and Refresh Token (14 days)
-7. Refresh token stored in Redis: `refresh_token:{uuid}` → `{user_id}`
-8. API Gateway validates all requests by fetching JWKS from Auth Service
+```sql
+-- user_service.users (⬜ PLANNED)
+-- auth_service.tokens (⬜ PLANNED)
+-- video_service.video_jobs (⬜ PLANNED - Future feature)
+```
 
-### Video Generation Flow (Asynchronous)
-1. Mobile app generates client-side UUID for `Idempotency-Key`
-2. Mobile app uploads photos to S3 (pre-signed URLs)
-3. Mobile app calls `POST /api/v1/videos` with header `Idempotency-Key: {uuid}`
-4. Video Service saves job to DB (status: PENDING) with idempotency_key
-5. Video Service publishes to SQS, returns `202 Accepted`
-6. Video Worker polls SQS, checks DB status (idempotency check)
-7. Worker processes (FFmpeg), uploads to S3, updates DB (status: COMPLETED)
-8. Worker publishes to SNS → Push notification to mobile
-9. Mobile app fetches `GET /api/v1/videos/{jobId}` for video_url (no polling)
+### JPA Entities & Repositories (Implemented)
+
+```java
+// TravelPlan entity with JPA annotations
+@Entity
+@Table(name = "travel_plans", schema = "plan_service")
+public class TravelPlan {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private Long userId;
+    private String title;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private String budgetLevel;
+    private String status;
+    // ... timestamps, getters, setters
+}
+
+// Repository pattern
+@Repository
+public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
+    List<TravelPlan> findByUserIdOrderByCreatedAtDesc(Long userId);
+}
+```
+
+## Key Implementation Patterns (Current)
+
+### Plan Generation Flow with Streaming (✅ IMPLEMENTED)
+
+**Step 1: Real-time Streaming (Cache Miss)**
+```
+1. Mobile: POST /api/v1/plans/generate/stream with SSE
+2. LLM Agent: Check Redis cache → MISS
+3. LLM Agent: Stream via LangGraph + Gemini
+   - Status updates (10%, 20%, ..., 100%)
+   - LLM chunks (progressive text generation)
+   - Completion event with full plan JSON
+4. LLM Agent: Cache result in Redis (1hr TTL)
+5. Mobile: Display streaming updates in real-time
+```
+
+**Step 2: Database Persistence**
+```
+6. Mobile: Receives complete plan → POST /api/v1/plans (REST)
+7. Plan Service: Save to PostgreSQL via JPA
+8. Plan Service: Returns saved plan with ID
+9. Mobile: Refresh plans list
+```
+
+**Cache Hit (Same Request)**
+```
+1. Mobile: POST /api/v1/plans/generate/stream
+2. LLM Agent: Check Redis cache → HIT (<1s)
+3. Mobile: Displays "💾 Cached" badge
+4. Plan Service: Save to DB (same as above)
+```
+
+### Reactive + Blocking Pattern (Spring Boot + JPA)
+
+**Problem:** Mixing Project Reactor (Mono/Flux) with blocking JPA
+**Solution:** Use `Mono.fromCallable()` for database operations
+
+```java
+// ❌ WRONG - Causes timeout
+public Mono<PlanResponse> createPlan(CreatePlanRequest request) {
+    return llmAgentClient.generatePlan(llmRequest)
+        .map(llmResponse -> {
+            // Blocking JPA call in reactive chain!
+            TravelPlan saved = repository.save(plan);
+            return toResponse(saved);
+        });
+}
+
+// ✅ CORRECT - Wraps blocking in Callable
+public Mono<PlanResponse> createPlan(CreatePlanRequest request) {
+    return llmAgentClient.generatePlan(llmRequest)
+        .flatMap(llmResponse -> {
+            TravelPlan plan = new TravelPlan();
+            // ... set fields from llmResponse
+
+            return Mono.fromCallable(() -> {
+                TravelPlan saved = repository.save(plan);
+                log.info("✅ Plan saved: id={}", saved.getId());
+                return toResponse(saved);
+            });
+        });
+}
+```
+
+### LLM-Only Strategy (NO Hardcoded Data)
+
+**All travel content is dynamically generated by Gemini:**
+```python
+# services/llm-agent/src/services/langgraph_planner.py
+async def generate_plan_streaming(
+    self,
+    location: str,
+    start_date: str,
+    end_date: str,
+    budget: str
+):
+    # Load prompt template from YAML (NO hardcoded prompts)
+    system_prompt = self.prompt_loader.get_planning_prompt()
+
+    # LangGraph → Gemini generates ALL content
+    # NO fallback to YAML data
+    # NO hardcoded restaurants/activities
+    async for chunk in self.langgraph.astream(user_input):
+        yield {"type": "chunk", "content": chunk}
+```
 
 ## Project Structure Convention
 
 ```
 oddiya/
-├── .github/workflows/       # GitHub Actions CI/CD
-├── infrastructure/          # K8s manifests, Terraform
-│   ├── kubernetes/
-│   │   ├── deployments/
-│   │   ├── services/
-│   │   └── ingress/
-│   └── terraform/
-├── services/
-│   ├── api-gateway/         # Spring Cloud Gateway
-│   ├── auth-service/        # Spring Boot
-│   ├── user-service/        # Spring Boot
-│   ├── plan-service/        # Spring Boot
-│   ├── llm-agent/           # FastAPI
-│   ├── video-service/       # Spring Boot
-│   └── video-worker/        # Python
-├── docs/                    # All documentation
-│   ├── architecture/        # System design
-│   ├── development/         # Dev guides
-│   ├── deployment/          # CI/CD, infrastructure
-│   ├── api/                 # API docs
-│   └── archive/             # Historical docs
-├── mobile/                  # React Native (future)
-└── scripts/                 # DevOps scripts
-
-Each service should follow:
-services/{service-name}/
-├── src/
-├── tests/
-├── Dockerfile
-├── build.gradle or requirements.txt
-└── README.md
+├── docs/                           # 📚 Documentation
+│   ├── CURRENT_IMPLEMENTATION_STATUS.md  # ⭐ Start here - current state
+│   ├── architecture/               # System design documents
+│   ├── development/                # Development guides
+│   └── archive/                    # Historical implementation docs
+├── services/                       # 🔧 Backend Services
+│   ├── llm-agent/                  # ✅ Python FastAPI + LangChain + Gemini
+│   │   ├── src/
+│   │   │   ├── routes/langgraph_plans.py      # SSE streaming endpoint
+│   │   │   ├── services/langgraph_planner.py  # LangGraph implementation
+│   │   │   └── config/prompts.yaml            # Externalized prompts
+│   │   ├── main.py                            # FastAPI app
+│   │   └── requirements.txt
+│   ├── plan-service/               # ✅ Spring Boot + JPA
+│   │   ├── src/main/java/com/oddiya/plan/
+│   │   │   ├── controller/PlanController.java
+│   │   │   ├── service/PlanService.java       # CRUD with DB persistence
+│   │   │   ├── repository/
+│   │   │   │   ├── TravelPlanRepository.java
+│   │   │   │   └── PlanDetailRepository.java
+│   │   │   └── entity/
+│   │   │       ├── TravelPlan.java
+│   │   │       └── PlanDetail.java
+│   │   └── src/main/resources/application.yml # JPA enabled
+│   ├── auth-service/               # ⏳ OAuth 2.0 (in progress)
+│   ├── api-gateway/                # ⬜ Future
+│   └── user-service/               # ⬜ Future
+├── mobile/                         # 📱 React Native Mobile App
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── services.ts         # REST API client
+│   │   │   └── streaming.ts        # SSE streaming client
+│   │   ├── screens/
+│   │   │   ├── PlansScreen.tsx     # Plan list view
+│   │   │   └── CreatePlanScreen.tsx # Streaming UI
+│   │   └── store/slices/
+│   │       └── plansSlice.ts       # Redux state
+│   ├── package.json
+│   └── App.tsx
+├── scripts/                        # 🛠️ Automation Scripts
+├── .env                           # Environment variables
+├── CLAUDE.md                      # System prompt for Claude Code
+├── .cursorrules                   # System prompt for Cursor
+├── README.md                      # Project overview
+└── CHANGELOG_2025-11-04.md        # Today's changes
 ```
 
 ## Coding Guidelines
@@ -246,78 +360,134 @@ services/{service-name}/
 - Horizontal Pod Autoscaler (HPA) for stateless services
 - SQS for async processing (avoid blocking operations)
 
-## Development Workflow
+## Common Commands (Local Development)
 
-### Week 1-2: Infrastructure & Auth (P1/P2)
-- Focus: EKS setup, t2.micro EC2s, Auth + User Services
-- Goal: OAuth 2.0 working end-to-end
-
-### Week 3-5: AI Planning (P1)
-- Focus: LLM Agent + Bedrock (LLM-only strategy), Plan Service
-- Smart prompt engineering for Korea travel planning
-- Redis caching optimization (target 90%+ cache hit rate)
-- No external API integration needed - faster development
-
-### Week 6-7: Video Pipeline (P3)
-- Focus: Video Service + Worker, SQS/SNS
-- Priority 1: One FFmpeg template
-- Priority 2: Additional templates (if time permits)
-
-### Week 8: Operations & Testing (P2)
-- Focus: Load testing, HPA, documentation
-- Expect to document t2.micro bottleneck
-
-## Common Commands
+### Start Services
 
 ```bash
-# Build Java service
-./gradlew clean build
+# 1. Start LLM Agent (Python FastAPI)
+cd services/llm-agent
+source venv/bin/activate
+python main.py
+# Running on http://localhost:8000
 
-# Build Python service
+# 2. Start Plan Service (Spring Boot)
+cd services/plan-service
+./gradlew bootRun
+# Running on http://localhost:8083
+
+# 3. Start PostgreSQL and Redis
+brew services start postgresql
+brew services start redis
+
+# 4. Start Mobile App
+cd mobile
+npm run ios     # iOS Simulator
+npm run android # Android Emulator
+```
+
+### Health Checks
+
+```bash
+# Check services
+curl http://localhost:8000/health          # LLM Agent
+curl http://localhost:8083/actuator/health # Plan Service
+redis-cli ping                             # Redis → PONG
+pg_isready                                 # PostgreSQL
+
+# Check running services
+ps aux | grep -E "python.*main.py|java.*plan-service"
+```
+
+### Build & Test
+
+```bash
+# Java (Spring Boot)
+cd services/plan-service
+./gradlew clean build    # Build
+./gradlew test          # Run tests
+
+# Python (FastAPI)
+cd services/llm-agent
 pip install -r requirements.txt
+pytest                  # Run tests
 
-# Docker build
-docker build -t oddiya/{service-name}:latest .
-
-# Deploy to K8s
-kubectl apply -f infrastructure/kubernetes/{service-name}/
-
-# Check pod status
-kubectl get pods -n oddiya
-
-# View logs
-kubectl logs -f deployment/{service-name} -n oddiya
-
-# Port forward for local testing
-kubectl port-forward svc/{service-name} 8080:8080 -n oddiya
+# Mobile
+cd mobile
+npm install
+npm test
 ```
 
-## Environment Variables Pattern
+### Database Operations
 
-### Common Variables
+```bash
+# Connect to PostgreSQL
+PGPASSWORD=4321 psql -h localhost -U admin -d oddiya
+
+# Check plans
+SELECT * FROM plan_service.travel_plans ORDER BY created_at DESC LIMIT 5;
+SELECT * FROM plan_service.plan_details WHERE plan_id = 1;
+
+# Check Redis cache
+redis-cli
+> KEYS plan:*
+> GET "plan:Seoul:2025-11-10:2025-11-12:MEDIUM"
 ```
-# Database (t2.micro PostgreSQL)
-DB_HOST=10.0.x.x  # Private IP
+
+### Logs
+
+```bash
+# LLM Agent logs
+tail -f /tmp/llm-agent.log | grep -E "Streaming|Cache"
+
+# Plan Service logs
+tail -f /tmp/plan-service.log | grep "PlanService"
+
+# Success indicators:
+# [PlanService] ✅ Plan saved to database: id=1
+# [LangGraph] Cache HIT for key: plan:Seoul:...
+```
+
+## Environment Variables (Current)
+
+### Required Variables
+
+```bash
+# Google Gemini (LLM Agent) - FREE TIER
+GOOGLE_API_KEY=your_api_key_here
+GEMINI_MODEL=gemini-2.0-flash-exp
+
+# PostgreSQL (Local Development)
+DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=oddiya
-DB_USER=oddiya_user
-DB_PASSWORD=***
+DB_USER=admin
+DB_PASSWORD=4321
 
-# Redis (t2.micro)
-REDIS_HOST=10.0.x.x  # Private IP
+# Redis (Local Development)
+REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# AWS
-AWS_REGION=ap-northeast-2
-S3_BUCKET=oddiya-storage
-SQS_QUEUE_URL=https://sqs.{region}.amazonaws.com/{account}/oddiya-video-jobs
-SNS_TOPIC_ARN=arn:aws:sns:{region}:{account}:oddiya-notifications
+# Service Ports (Current Running)
+LLM_AGENT_PORT=8000
+PLAN_SERVICE_PORT=8083
 
-# Bedrock (LLM Agent only) - Claude Sonnet 4.5
-BEDROCK_MODEL_ID=anthropic.claude-sonnet-4-5-20250929-v1:0
-BEDROCK_REGION=us-east-1
-# No external APIs - LLM-only strategy for MVP
+# Future (OAuth - In Progress)
+GOOGLE_CLIENT_ID=***
+GOOGLE_CLIENT_SECRET=***
+APPLE_CLIENT_ID=***
+APPLE_PRIVATE_KEY=***
+
+# Future (AWS - Not Yet Used)
+# AWS_REGION=ap-northeast-2
+# S3_BUCKET=oddiya-storage
 ```
+
+### File Locations
+- `.env` - Root directory (gitignored)
+- `.env.example` - Template for new developers
+- `services/llm-agent/.env` - Python service env
+- `services/plan-service/src/main/resources/application.yml` - Spring Boot config
 
 ## Testing Strategy
 
@@ -333,26 +503,35 @@ BEDROCK_REGION=us-east-1
 - Locust for HTTP load testing
 - Test scenarios: Auth flow, Plan generation, Video submission
 
-## Important Notes
+## Important Notes (Current Implementation)
 
-1. **LLM-Only Strategy:** NO external APIs (no Kakao, no weather, no exchange rate) - AWS Bedrock Claude Sonnet 4.5 only
-2. **Security Groups:** Ensure EKS nodes can reach t2.micro EC2s on ports 5432 and 6379
-3. **Idempotency:** Video Service MUST use client-provided UUID, Worker MUST check DB before processing
-4. **JWT Validation:** API Gateway fetches JWKS from Auth Service, caches public key in Redis
-5. **No Client Polling:** Use SNS push notifications instead of polling for video status
-6. **Spot Instances:** t3.medium is Spot, plan for potential interruptions (use node affinity)
-7. **Cost Optimization:** Redis caching with 1hr TTL for LLM responses (target 90%+ cache hit rate)
+1. **✅ LLM-Only Strategy:** Google Gemini 2.0 Flash ONLY - NO external APIs (no Kakao, no weather, no exchange rate)
+2. **✅ NO Hardcoded Data:** ALL travel content dynamically generated by LLM
+3. **✅ Streaming Implementation:** SSE with real-time progress updates (ChatGPT-style)
+4. **✅ Database Persistence:** JPA + PostgreSQL for saving generated plans
+5. **✅ Redis Caching:** 1-hour TTL, 99% cost savings on repeated requests
+6. **✅ Reactive Pattern:** Use `Mono.fromCallable()` for mixing reactive + blocking JPA
+7. **⏳ OAuth In Progress:** Google/Apple OAuth implementation ongoing
+8. **⬜ Future:** API Gateway, User Service, Video Generation
+
+### Current Bugs Fixed (2025-11-04)
+- ✅ Timer bug in CreatePlanScreen (was showing 0.0s)
+- ✅ Plans not persisting (database was disabled)
+- ✅ AsyncRequestTimeoutException (fixed with `Mono.fromCallable()`)
 
 ## When Starting New Chat
-1. Read this file first to understand project context
-2. Check `TechSpecPRD.md` for detailed specifications
-3. Review existing service implementations before creating new ones
-4. Always prefer updating existing files over creating new ones
-5. Follow the established package structure and naming conventions
+
+1. **FIRST:** Read `docs/CURRENT_IMPLEMENTATION_STATUS.md` for latest state
+2. Check this file (`.cursorrules`) for architecture and patterns
+3. Review `CLAUDE.md` for project guidelines
+4. Check existing service implementations before creating new ones
+5. Always prefer updating existing files over creating new ones
 
 ## Questions to Ask Before Implementation
-- Does this file already exist?
-- Can I update an existing service instead of creating a new one?
-- Does this follow the microservice architecture outlined above?
-- Is this aligned with the current week's priorities?
-- Have I considered the t2.micro resource constraints?
+
+- ✅ Does this file already exist? (Read first!)
+- ✅ Can I update an existing file instead of creating a new one?
+- ✅ Does this follow the LLM-only strategy? (NO hardcoded data!)
+- ✅ Have I checked CURRENT_IMPLEMENTATION_STATUS.md?
+- ✅ Is this consistent with the current local development setup?
+- ✅ Am I using the correct AI model (Gemini, NOT Bedrock)?

@@ -21,10 +21,12 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()  // Mobile app auth endpoints
-                .requestMatchers("/oauth2/**").permitAll()     // OAuth endpoints
-                .requestMatchers("/actuator/**").permitAll()   // Health check
-                .requestMatchers("/.well-known/**").permitAll() // JWKS endpoint
+                .requestMatchers("/api/auth/**").permitAll()      // Mobile app auth endpoints
+                .requestMatchers("/api/v1/auth/**").permitAll()   // Auth endpoints (v1)
+                .requestMatchers("/oauth2/**").permitAll()        // OAuth authorize endpoints
+                .requestMatchers("/login/oauth2/**").permitAll()  // OAuth callback endpoints
+                .requestMatchers("/actuator/**").permitAll()      // Health check
+                .requestMatchers("/.well-known/**").permitAll()   // JWKS endpoint
                 .anyRequest().authenticated()
             );
 

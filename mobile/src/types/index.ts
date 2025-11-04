@@ -10,14 +10,20 @@ export interface User {
 }
 
 export interface TravelPlan {
-  id: number;
-  userId: number;
+  id?: number;
+  userId?: number;
   title: string;
-  startDate: string;
-  endDate: string;
-  details: PlanDetail[];
-  createdAt: string;
-  updatedAt: string;
+  startDate?: string;
+  endDate?: string;
+  details?: PlanDetail[];
+  days?: PlanDay[];  // From LLM service
+  totalEstimatedCost?: number;
+  currency?: string;
+  weatherSummary?: string;
+  tips?: string[];
+  metadata?: PlanMetadata;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PlanDetail {
@@ -25,6 +31,24 @@ export interface PlanDetail {
   day: number;
   location: string;
   activity: string;
+}
+
+export interface PlanDay {
+  day: number;
+  location: string;
+  activity: string;
+  estimatedCost: number;
+  weatherTip?: string;
+}
+
+export interface PlanMetadata {
+  generatedAt: string;
+  iterations: number;
+  location: string;
+  budget: string;
+  aiModel: string;
+  externalApis: string[];
+  architecture: string;
 }
 
 export interface VideoJob {
@@ -50,9 +74,12 @@ export interface TokenResponse {
 // API Request Types
 
 export interface CreatePlanRequest {
-  title: string;
+  title?: string;
+  location: string;
   startDate: string;
   endDate: string;
+  budget?: 'low' | 'medium' | 'high';
+  maxIterations?: number;
 }
 
 export interface UpdateUserRequest {

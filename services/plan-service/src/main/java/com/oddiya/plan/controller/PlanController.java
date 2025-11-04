@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/plans")
+@RequestMapping("/api/v1/plans")
 @RequiredArgsConstructor
 public class PlanController {
     private final PlanService planService;

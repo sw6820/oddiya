@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { authService, userService } from '@/api/services';
 import { AuthState, TokenResponse, User } from '@/types';
 import { secureStorage } from '@/utils/secureStorage';
+import { googleSignInService } from '@/services/googleSignInService';
 
 const initialState: AuthState = {
   user: null,
@@ -60,9 +61,24 @@ export const signupWithEmail = createAsyncThunk(
 export const loginWithGoogle = createAsyncThunk(
   'auth/loginWithGoogle',
   async () => {
-    // TODO: Implement Google OAuth flow with expo-auth-session
-    // For now, throw error with instructions
-    throw new Error('Google login will be implemented in next update');
+    // Sign in with Google and get ID token
+    const googleUser = await googleSignInService.signIn();
+
+    // Send ID token to backend for verification and JWT generation
+    const tokenResponse = await authService.googleLogin(googleUser.idToken);
+
+    // Store tokens securely
+    await secureStorage.setAuthData({
+      accessToken: tokenResponse.accessToken,
+      refreshToken: tokenResponse.refreshToken,
+      userId: String(tokenResponse.userId),
+      email: googleUser.email,
+    });
+
+    // Fetch user profile
+    const user = await userService.getProfile();
+
+    return { tokenResponse, user };
   },
 );
 

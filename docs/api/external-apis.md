@@ -1,5 +1,15 @@
 # API Comparison: Kakao vs Naver vs Google Places
 
+> **⚠️ DEPRECATION NOTICE (2025-11-04)**
+>
+> **Kakao API is NO LONGER USED in Oddiya.**
+>
+> The project now uses **Google Gemini AI** for all travel planning, which generates comprehensive Korea travel itineraries without needing external location APIs. Gemini has built-in knowledge of Korean destinations, restaurants, and attractions.
+>
+> This document is kept for **reference only** in case future expansion requires external location APIs.
+
+---
+
 ## Quick Summary for Oddiya
 
 | Feature | Kakao Local API | Naver Places API | Google Places API |

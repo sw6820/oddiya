@@ -27,6 +27,9 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
     implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
     implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+    // Google API Client for verifying ID tokens from mobile apps
+    implementation 'com.google.api-client:google-api-client:2.2.0'
     
     // Redis client
     implementation 'org.apache.commons:commons-pool2'

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,37 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/types';
+import { useAppDispatch } from '@/store/hooks';
+import { loginWithGoogle } from '@/store/slices/authSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Welcome'>;
 
 const { width } = Dimensions.get('window');
 
 export default function WelcomeScreen({ navigation }: Props) {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await dispatch(loginWithGoogle()).unwrap();
+      // Navigation is handled by App.tsx based on auth state
+    } catch (error: any) {
+      Alert.alert(
+        'Sign In Failed',
+        error.message || 'Failed to sign in with Google. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <View style={styles.container}>
       {/* Logo */}
@@ -45,19 +67,45 @@ export default function WelcomeScreen({ navigation }: Props) {
 
       {/* CTA Buttons */}
       <View style={styles.buttonContainer}>
+        {/* Google Sign-In Button */}
         <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => navigation.navigate('Login')}
-          activeOpacity={0.8}>
-          <Text style={styles.primaryButtonText}>Log In</Text>
+          style={styles.googleButton}
+          onPress={handleGoogleSignIn}
+          activeOpacity={0.8}
+          disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={styles.googleIcon}>🔵</Text>
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </>
+          )}
         </TouchableOpacity>
 
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Email Sign-In Button */}
         <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Signup')}
-          activeOpacity={0.8}>
-          <Text style={styles.secondaryButtonText}>Sign Up</Text>
+          style={styles.emailButton}
+          onPress={() => navigation.navigate('Login')}
+          activeOpacity={0.8}
+          disabled={isLoading}>
+          <Text style={styles.emailButtonText}>Sign in with Email</Text>
         </TouchableOpacity>
+
+        {/* Terms */}
+        <Text style={styles.termsText}>
+          By continuing, you agree to our{' '}
+          <Text style={styles.termsLink}>Terms of Service</Text>
+          {' '}and{' '}
+          <Text style={styles.termsLink}>Privacy Policy</Text>
+        </Text>
       </View>
     </View>
   );
@@ -137,28 +185,67 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   buttonContainer: {
-    gap: 12,
+    gap: 16,
   },
-  primaryButton: {
-    backgroundColor: '#007AFF',
+  googleButton: {
+    backgroundColor: '#4285F4', // Google Blue
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  primaryButtonText: {
+  googleIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  googleButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },
-  secondaryButton: {
-    backgroundColor: '#F5F5F5',
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: '#999999',
+    fontSize: 14,
+  },
+  emailButton: {
+    backgroundColor: '#FFFFFF',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
   },
-  secondaryButtonText: {
+  emailButtonText: {
     color: '#007AFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  termsText: {
+    fontSize: 12,
+    color: '#999999',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#007AFF',
+    textDecorationLine: 'underline',
   },
 });

@@ -14,6 +14,7 @@ import SignupScreen from '@/screens/SignupScreen';
 // Main App Screens
 import PlansScreen from '@/screens/PlansScreen';
 import VideosScreen from '@/screens/VideosScreen';
+import CreatePlanScreen from '@/screens/CreatePlanScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -89,7 +90,18 @@ export default function AppNavigator() {
           </>
         ) : (
           // Main App Stack
-          <Stack.Screen name="MainTabs" component={MainTabs} />
+          <>
+            <Stack.Screen name="MainTabs" component={MainTabs} />
+            <Stack.Screen
+              name="CreatePlan"
+              component={CreatePlanScreen}
+              options={{
+                headerShown: true,
+                title: 'Create Travel Plan',
+                headerBackTitle: 'Back',
+              }}
+            />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

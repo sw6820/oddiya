@@ -38,11 +38,17 @@ htmlcov/
 .dockerignore
 docker-compose.override.yml
 
-# Environment
+# Environment variables (actual values)
 .env
 .env.local
 .env.*.local
 *.env
+.env.bedrock
+.env.oauth
+
+# But KEEP template files in git
+!.env.example
+!.env.production.example
 
 # IDE
 .vscode/
@@ -87,6 +93,20 @@ temp/
 secrets/
 *.secret
 
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+!terraform.tfvars.example
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
 # Node modules (if any future frontend)
 node_modules/
 
@@ -108,5 +128,3 @@ test-results/*.csv
 test-results/*.html
 test-results/load/
 !test-results/.gitkeep
-.env.bedrock
-.env.oauth

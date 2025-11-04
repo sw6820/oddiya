@@ -1,0 +1,11 @@
+# Oddiya Expo Deployment Progress
+# Started: $(date)
+
+## Checklist
+[ ] Step 1: Install Expo packages
+[ ] Step 2: Login to Expo
+[ ] Step 3: Create app.json
+[ ] Step 4: Initialize EAS Build
+[ ] Step 5: Test Android build
+[ ] Step 6: Setup iOS (optional)
+[ ] Step 7: Final build (Android + iOS)
