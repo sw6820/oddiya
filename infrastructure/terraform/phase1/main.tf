@@ -41,36 +41,24 @@ data "aws_vpc" "main" {
 #   }
 # }
 
-# Internet Gateway
-resource "aws_internet_gateway" "main" {
-  vpc_id = data.aws_vpc.main.id
-
-  tags = {
-    Name = "oddiya-igw-${var.environment}"
+# Internet Gateway - Use existing default VPC IGW
+data "aws_internet_gateway" "main" {
+  filter {
+    name   = "attachment.vpc-id"
+    values = [data.aws_vpc.main.id]
   }
 }
 
-# Public Subnet (for App Server)
-resource "aws_subnet" "public" {
-  vpc_id                  = data.aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  availability_zone       = "${var.aws_region}a"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "oddiya-public-subnet-${var.environment}"
-  }
-}
-
-# Private Subnet (for DB Server)
-resource "aws_subnet" "private" {
+# Public Subnet - Use existing default VPC subnet in AZ-a (has public IP)
+data "aws_subnet" "public" {
   vpc_id            = data.aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
   availability_zone = "${var.aws_region}a"
+}
 
-  tags = {
-    Name = "oddiya-private-subnet-${var.environment}"
-  }
+# Private Subnet - Use existing default VPC subnet in AZ-b
+data "aws_subnet" "private" {
+  vpc_id            = data.aws_vpc.main.id
+  availability_zone = "${var.aws_region}b"
 }
 
 # NAT Gateway removed for cost optimization ($32/month savings)
@@ -78,42 +66,11 @@ resource "aws_subnet" "private" {
 # Updates must be done via SSH tunnel through app server
 # See: docs/deployment/PHASE1_DEPLOYMENT_PLAN.md for instructions
 
-# Route Table for Public Subnet
-resource "aws_route_table" "public" {
-  vpc_id = data.aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-
-  tags = {
-    Name = "oddiya-public-rt-${var.environment}"
-  }
-}
-
-# Route Table for Private Subnet (no internet route - cost optimized)
-resource "aws_route_table" "private" {
-  vpc_id = data.aws_vpc.main.id
-
-  # No default route to internet - saves $32/month on NAT Gateway
-  # Database server can only be accessed via app server (bastion)
-
-  tags = {
-    Name = "oddiya-private-rt-${var.environment}"
-  }
-}
-
-# Route Table Associations
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table_association" "private" {
-  subnet_id      = aws_subnet.private.id
-  route_table_id = aws_route_table.private.id
-}
+# Route Tables - Use default VPC route tables (already configured)
+# Default VPC automatically has:
+# - Main route table with IGW route for public subnets
+# - All subnets use this main route table by default
+# No need to create additional route tables for default VPC
 
 # Security Group: Application Server
 resource "aws_security_group" "app_server" {
