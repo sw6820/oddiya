@@ -221,7 +221,7 @@ resource "aws_instance" "app_server" {
   ami           = data.aws_ami.amazon_linux_2023.id
   instance_type = var.instance_type
 
-  subnet_id                   = aws_subnet.public.id
+  subnet_id                   = data.aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.app_server.id]
   associate_public_ip_address = true
   key_name                    = data.aws_key_pair.main.key_name
@@ -250,7 +250,7 @@ resource "aws_eip" "app_server" {
     Name = "oddiya-app-server-eip-${var.environment}"
   }
 
-  depends_on = [aws_internet_gateway.main]
+  depends_on = [data.aws_internet_gateway.main]
 }
 
 # EC2 Instance: Database Server
@@ -258,7 +258,7 @@ resource "aws_instance" "db_server" {
   ami           = data.aws_ami.amazon_linux_2023.id
   instance_type = var.instance_type
 
-  subnet_id              = aws_subnet.private.id
+  subnet_id              = data.aws_subnet.private.id
   vpc_security_group_ids = [aws_security_group.db_server.id]
   key_name               = data.aws_key_pair.main.key_name
 
@@ -299,10 +299,10 @@ output "vpc_id" {
 
 output "public_subnet_id" {
   description = "Public subnet ID"
-  value       = aws_subnet.public.id
+  value       = data.aws_subnet.public.id
 }
 
 output "private_subnet_id" {
   description = "Private subnet ID"
-  value       = aws_subnet.private.id
+  value       = data.aws_subnet.private.id
 }
