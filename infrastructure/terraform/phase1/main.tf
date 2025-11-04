@@ -24,10 +24,10 @@ provider "aws" {
   }
 }
 
-# VPC - Use existing vpc-0ce0562f13566cbf6 (oddiya-prod-vpc)
-# This avoids VPC limit errors by reusing existing VPC
+# VPC - Use default VPC (simplest, no conflicts)
+# Default VPC is clean and ready to use
 data "aws_vpc" "main" {
-  id = "vpc-0ce0562f13566cbf6"
+  default = true
 }
 
 # Create new VPC only if the existing one doesn't exist (fallback)
