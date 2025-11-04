@@ -11,6 +11,8 @@
 4. **PREFER UPDATES** - When adding features, update existing files rather than creating new ones
 5. **NO DUPLICATE FILES** - Check for existing implementations before creating new files
 6. **NEVER HARDCODE** - Use LLM for ALL travel content, configuration files for settings
+
+   **Data & Content:**
    - ❌ NO switch/case for travel data
    - ❌ NO if/else chains for destinations/activities
    - ❌ NO inline strings for content (prompts, messages, activities)
@@ -19,6 +21,17 @@
    - ✅ USE external configuration files for prompts only
    - ✅ USE database for storing generated plans
    - ✅ USE Redis for caching LLM responses
+
+   **Secrets & Credentials (CRITICAL SECURITY):**
+   - ❌ NO API keys hardcoded in source code
+   - ❌ NO OAuth client IDs/secrets in files
+   - ❌ NO database passwords in code or scripts
+   - ❌ NO AWS credentials in scripts or configs
+   - ❌ NO example secrets used for comparison (even in validation)
+   - ✅ USE environment variables (.env files, GitHub Secrets, AWS Secrets Manager)
+   - ✅ USE pattern validation (regex) instead of hardcoded examples
+   - ✅ LOAD secrets from .env at runtime only
+   - ✅ NEVER commit .env or secrets to git (.gitignore protects them)
 
 ## Project Overview
 - **Name:** Oddiya (v1.3.1)
