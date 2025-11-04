@@ -12,8 +12,8 @@
 
 | Credential | Status | Value |
 |------------|--------|-------|
-| **Client ID** | ✅ | `201806680568-34bjg6mnu76939outdakjbf8gmme1r5m.apps.googleusercontent.com` |
-| **Client Secret** | ✅ | `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` |
+| **Client ID** | ✅ | `YOUR_GOOGLE_CLIENT_ID` |
+| **Client Secret** | ✅ | `YOUR_GOOGLE_CLIENT_SECRET` |
 | **Redirect URI** | ✅ | `http://localhost:8080/api/v1/auth/oauth/google/callback` |
 | **Configuration Files** | ✅ | `.env`, `terraform.tfvars` |
 
@@ -52,8 +52,8 @@
 
 ```bash
 # Google OAuth 2.0 (for Android/iOS login)
-GOOGLE_CLIENT_ID=201806680568-34bjg6mnu76939outdakjbf8gmme1r5m.apps.googleusercontent.com ✅
-GOOGLE_CLIENT_SECRET=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 ✅
+GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID ✅
+GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET ✅
 OAUTH_REDIRECT_URI=http://localhost:8080/api/v1/auth/oauth/google/callback ✅
 
 # Apple Sign In (for iOS App)
@@ -68,8 +68,8 @@ APPLE_PRIVATE_KEY=PASTE_YOUR_APPLE_PRIVATE_KEY_HERE ⏳
 
 ```hcl
 # Google OAuth 2.0 (for user authentication)
-google_client_id = "201806680568-34bjg6mnu76939outdakjbf8gmme1r5m.apps.googleusercontent.com" ✅
-google_client_secret = "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" ✅
+google_client_id = "YOUR_GOOGLE_CLIENT_ID" ✅
+google_client_secret = "YOUR_GOOGLE_CLIENT_SECRET" ✅
 
 # Apple Sign In (Optional - for iOS App)
 apple_client_id = "PASTE_YOUR_APPLE_CLIENT_ID_HERE" ⏳
@@ -215,7 +215,7 @@ cat .env | grep GOOGLE_CLIENT
 
 # Should show:
 # GOOGLE_CLIENT_ID=201806680568...googleusercontent.com
-# GOOGLE_CLIENT_SECRET=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
+# GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET
 ```
 
 ---

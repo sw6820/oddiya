@@ -7,8 +7,8 @@
 ## ✅ What's Been Configured
 
 ### 1. Google OAuth 2.0 Credentials
-- ✅ **Client ID:** `201806680568-34bjg6mnu76939outdakjbf8gmme1r5m.apps.googleusercontent.com`
-- ✅ **Client Secret:** `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`
+- ✅ **Client ID:** `YOUR_GOOGLE_CLIENT_ID`
+- ✅ **Client Secret:** `YOUR_GOOGLE_CLIENT_SECRET`
 - ✅ **Redirect URI:** `http://localhost:8080/api/v1/auth/oauth/google/callback`
 - ✅ **Location:** `.env` file (lines 32-35)
 
@@ -158,7 +158,7 @@ cat .env | grep -E "GOOGLE_|DB_|REDIS"
 
 # 3. Test OAuth credentials
 cat .env | grep GOOGLE_CLIENT_ID
-# Should show: 201806680568-34bjg6mnu76939outdakjbf8gmme1r5m.apps.googleusercontent.com
+# Should show: YOUR_GOOGLE_CLIENT_ID
 
 # 4. Verify git protection
 git status | grep -E "\.env|terraform\.tfvars"
