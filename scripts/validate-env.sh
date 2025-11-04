@@ -115,7 +115,10 @@ echo -e "${BLUE}🚀 REQUIRED FOR BASIC OPERATION${NC}"
 echo -e "${BLUE}════════════════════════════════════════${NC}"
 
 check_required "GOOGLE_API_KEY" "Get from: https://makersuite.google.com/app/apikey"
-check_warning "GOOGLE_API_KEY" "AIzaSyDlMvCLaGNMbPJXvnNkpjf_d4gOQOr5Hbk" "Using example API key - replace with your own!"
+# Validate API key format (should start with AIzaSy and be ~39 characters)
+if [ -n "$GOOGLE_API_KEY" ]; then
+    check_format "GOOGLE_API_KEY" "^AIzaSy[a-zA-Z0-9_-]{33}$" "Should start with AIzaSy (39 chars total)"
+fi
 check_required "GEMINI_MODEL" "Recommended: gemini-2.0-flash-exp"
 check_required "REDIS_HOST" "localhost for local, redis for Docker"
 check_required "REDIS_PORT" "Default: 6379"
@@ -134,12 +137,20 @@ check_optional "GOOGLE_CLIENT_SECRET" "Required for OAuth login"
 
 if [ -n "$GOOGLE_CLIENT_ID" ]; then
     check_format "GOOGLE_CLIENT_ID" "\.apps\.googleusercontent\.com$" "Should end with .apps.googleusercontent.com"
-    check_warning "GOOGLE_CLIENT_ID" "201806680568-34bjg6mnu76939outdakjbf8gmme1r5m.apps.googleusercontent.com" "Using example Client ID - replace with your own!"
+    # Validate that it's not a placeholder
+    if [[ "$GOOGLE_CLIENT_ID" == *"YOUR_"* ]] || [[ "$GOOGLE_CLIENT_ID" == *"EXAMPLE"* ]]; then
+        echo -e "${YELLOW}⚠️  WARNING: GOOGLE_CLIENT_ID looks like a placeholder${NC}"
+        ((WARNINGS++))
+    fi
 fi
 
 if [ -n "$GOOGLE_CLIENT_SECRET" ]; then
     check_format "GOOGLE_CLIENT_SECRET" "^GOCSPX-" "Should start with GOCSPX-"
-    check_warning "GOOGLE_CLIENT_SECRET" "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" "Using example Secret - replace with your own!"
+    # Validate minimum length for security
+    if [ ${#GOOGLE_CLIENT_SECRET} -lt 20 ]; then
+        echo -e "${YELLOW}⚠️  WARNING: GOOGLE_CLIENT_SECRET seems too short${NC}"
+        ((WARNINGS++))
+    fi
 fi
 
 check_optional "OAUTH_REDIRECT_URI" "OAuth callback URL"
