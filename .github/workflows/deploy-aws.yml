@@ -59,7 +59,7 @@ jobs:
           cd infrastructure/terraform/phase1
           cat > terraform.tfvars << EOF
           aws_region = "ap-northeast-2"
-          environment = "prod"
+          environment = "production2024"
           instance_type = "t2.micro"
           key_pair_name = "${{ secrets.SSH_KEY_NAME }}"
           admin_ip_whitelist = ["${{ secrets.ADMIN_IP }}/32"]
