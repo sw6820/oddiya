@@ -34,13 +34,11 @@ jobs:
         with:
           java-version: '21'
           distribution: 'corretto'
-          cache: 'gradle'
 
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
