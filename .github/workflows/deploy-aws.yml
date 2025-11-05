@@ -158,6 +158,28 @@ jobs:
           echo "app_ip=$(terraform output -raw app_server_public_ip)" >> $GITHUB_OUTPUT
           echo "db_ip=$(terraform output -raw db_server_private_ip)" >> $GITHUB_OUTPUT
 
+      - name: Wait for Instance and Open SSH
+        run: |
+          APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
+
+          # Get security group ID
+          APP_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=oddiya-app-server-production2024" --query 'SecurityGroups[0].GroupId' --output text)
+
+          # Temporarily allow SSH from GitHub Actions runners (0.0.0.0/0 for now)
+          echo "Opening SSH port for deployment..."
+          aws ec2 authorize-security-group-ingress --group-id "$APP_SG" --protocol tcp --port 22 --cidr 0.0.0.0/0 2>/dev/null || echo "Rule already exists or failed"
+
+          # Wait for instance to be fully ready and SSH accessible
+          echo "Waiting for instance to be ready..."
+          for i in {1..30}; do
+            if nc -z -w5 "$APP_IP" 22 2>/dev/null; then
+              echo "✓ SSH is accessible"
+              break
+            fi
+            echo "Attempt $i/30: Waiting for SSH..."
+            sleep 10
+          done
+
       - name: Build Plan Service
         run: |
           cd services/plan-service
