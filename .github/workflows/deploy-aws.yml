@@ -78,6 +78,35 @@ jobs:
           cd infrastructure/terraform/phase1
           terraform init
 
+      - name: Cleanup Existing Resources
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "=== Cleaning up leftover resources from previous runs ==="
+
+          # Delete security groups
+          for sg_name in "oddiya-app-server-production2024" "oddiya-db-server-production2024"; do
+            SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=$sg_name" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
+            if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+              echo "Found security group $sg_name, attempting deletion..."
+              aws ec2 delete-security-group --group-id "$SG_ID" 2>/dev/null || echo "Could not delete (may have dependencies)"
+            fi
+          done
+
+          # Delete IAM resources
+          ROLE_NAME="oddiya-app-server-role-production2024"
+          PROFILE_NAME="oddiya-app-server-profile-production2024"
+          if aws iam get-role --role-name $ROLE_NAME 2>/dev/null; then
+            echo "Found IAM role, deleting..."
+            for policy in $(aws iam list-attached-role-policies --role-name $ROLE_NAME --query 'AttachedPolicies[*].PolicyArn' --output text 2>/dev/null); do
+              aws iam detach-role-policy --role-name $ROLE_NAME --policy-arn $policy 2>/dev/null || true
+            done
+            aws iam remove-role-from-instance-profile --instance-profile-name $PROFILE_NAME --role-name $ROLE_NAME 2>/dev/null || true
+            aws iam delete-instance-profile --instance-profile-name $PROFILE_NAME 2>/dev/null || true
+            aws iam delete-role --role-name $ROLE_NAME 2>/dev/null || true
+          fi
+
+          echo "✓ Cleanup complete"
+
       - name: Terraform Plan
         run: |
           cd infrastructure/terraform/phase1
