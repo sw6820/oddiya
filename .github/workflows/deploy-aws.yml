@@ -92,13 +92,28 @@ jobs:
           if [ -n "$INSTANCE_IDS" ]; then
             echo "Terminating instances: $INSTANCE_IDS"
             aws ec2 terminate-instances --instance-ids $INSTANCE_IDS 2>/dev/null || true
-            echo "Waiting 20s for instances to terminate..."
-            sleep 20
+            echo "Waiting 60s for instances to fully terminate and ENIs to detach..."
+            sleep 60
           fi
 
           # Get security group IDs
           APP_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=oddiya-app-server-production2024" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
           DB_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=oddiya-db-server-production2024" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
+
+          # Delete network interfaces associated with security groups
+          echo "Cleaning up network interfaces..."
+          for SG in $DB_SG $APP_SG; do
+            if [ -n "$SG" ] && [ "$SG" != "None" ]; then
+              ENI_IDS=$(aws ec2 describe-network-interfaces --filters "Name=group-id,Values=$SG" --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text 2>/dev/null || echo "")
+              if [ -n "$ENI_IDS" ]; then
+                for ENI in $ENI_IDS; do
+                  echo "Deleting ENI: $ENI"
+                  aws ec2 delete-network-interface --network-interface-id "$ENI" 2>/dev/null || true
+                done
+                sleep 10
+              fi
+            fi
+          done
 
           # Delete DB security group first (it depends on app SG)
           if [ -n "$DB_SG" ] && [ "$DB_SG" != "None" ]; then
@@ -109,7 +124,7 @@ jobs:
             [ "$DB_INGRESS" != "[]" ] && aws ec2 revoke-security-group-ingress --group-id "$DB_SG" --ip-permissions "$DB_INGRESS" 2>/dev/null || true
             [ "$DB_EGRESS" != "[]" ] && aws ec2 revoke-security-group-egress --group-id "$DB_SG" --ip-permissions "$DB_EGRESS" 2>/dev/null || true
             sleep 5
-            aws ec2 delete-security-group --group-id "$DB_SG" 2>/dev/null && echo "✓ Deleted DB SG" || echo "Could not delete DB SG"
+            aws ec2 delete-security-group --group-id "$DB_SG" 2>/dev/null && echo "✓ Deleted DB SG" || echo "⚠ Could not delete DB SG (may still be in use)"
           fi
 
           # Delete App security group
@@ -121,7 +136,7 @@ jobs:
             [ "$APP_INGRESS" != "[]" ] && aws ec2 revoke-security-group-ingress --group-id "$APP_SG" --ip-permissions "$APP_INGRESS" 2>/dev/null || true
             [ "$APP_EGRESS" != "[]" ] && aws ec2 revoke-security-group-egress --group-id "$APP_SG" --ip-permissions "$APP_EGRESS" 2>/dev/null || true
             sleep 5
-            aws ec2 delete-security-group --group-id "$APP_SG" 2>/dev/null && echo "✓ Deleted App SG" || echo "Could not delete App SG"
+            aws ec2 delete-security-group --group-id "$APP_SG" 2>/dev/null && echo "✓ Deleted App SG" || echo "⚠ Could not delete App SG (may still be in use)"
           fi
 
           # Delete IAM resources
