@@ -331,6 +331,42 @@ jobs:
           sudo systemctl restart llm-agent
           ENDSSH
 
+      - name: Debug Services
+        run: |
+          APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
+
+          echo "=== Checking Service Status ==="
+          ssh -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            ec2-user@$APP_IP << 'ENDSSH'
+          echo "--- LLM Agent Status ---"
+          sudo systemctl status llm-agent --no-pager || true
+
+          echo ""
+          echo "--- Plan Service Status ---"
+          sudo systemctl status plan-service --no-pager || true
+
+          echo ""
+          echo "--- Running Processes ---"
+          ps aux | grep -E "(python|java)" | grep -v grep || true
+
+          echo ""
+          echo "--- LLM Agent Logs (last 30 lines) ---"
+          sudo journalctl -u llm-agent -n 30 --no-pager || true
+
+          echo ""
+          echo "--- Plan Service Logs (last 30 lines) ---"
+          sudo journalctl -u plan-service -n 30 --no-pager || true
+
+          echo ""
+          echo "--- Check .env file ---"
+          ls -la /opt/oddiya/llm-agent/.env || echo ".env file not found"
+
+          echo ""
+          echo "--- Port Bindings ---"
+          sudo netstat -tulpn | grep -E ":(8000|8083)" || echo "No services listening on 8000 or 8083"
+          ENDSSH
+
       - name: Health Check
         run: |
           APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
