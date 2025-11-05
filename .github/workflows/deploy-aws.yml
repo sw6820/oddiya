@@ -91,9 +91,11 @@ jobs:
           if [ -n "$DB_SG" ] && [ "$DB_SG" != "None" ]; then
             echo "Deleting DB security group $DB_SG..."
             # First revoke all rules to remove dependencies
-            aws ec2 revoke-security-group-ingress --group-id "$DB_SG" --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$DB_SG" --query 'SecurityGroups[0].IpPermissions' --output json)" 2>/dev/null || true
-            aws ec2 revoke-security-group-egress --group-id "$DB_SG" --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$DB_SG" --query 'SecurityGroups[0].IpPermissionsEgress' --output json)" 2>/dev/null || true
-            sleep 2
+            DB_INGRESS=$(aws ec2 describe-security-groups --group-ids "$DB_SG" --query 'SecurityGroups[0].IpPermissions' --output json 2>/dev/null)
+            DB_EGRESS=$(aws ec2 describe-security-groups --group-ids "$DB_SG" --query 'SecurityGroups[0].IpPermissionsEgress' --output json 2>/dev/null)
+            [ "$DB_INGRESS" != "[]" ] && aws ec2 revoke-security-group-ingress --group-id "$DB_SG" --ip-permissions "$DB_INGRESS" 2>/dev/null || true
+            [ "$DB_EGRESS" != "[]" ] && aws ec2 revoke-security-group-egress --group-id "$DB_SG" --ip-permissions "$DB_EGRESS" 2>/dev/null || true
+            sleep 5
             aws ec2 delete-security-group --group-id "$DB_SG" 2>/dev/null && echo "✓ Deleted DB SG" || echo "Could not delete DB SG"
           fi
 
@@ -101,9 +103,11 @@ jobs:
           if [ -n "$APP_SG" ] && [ "$APP_SG" != "None" ]; then
             echo "Deleting App security group $APP_SG..."
             # Revoke all rules
-            aws ec2 revoke-security-group-ingress --group-id "$APP_SG" --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$APP_SG" --query 'SecurityGroups[0].IpPermissions' --output json)" 2>/dev/null || true
-            aws ec2 revoke-security-group-egress --group-id "$APP_SG" --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$APP_SG" --query 'SecurityGroups[0].IpPermissionsEgress' --output json)" 2>/dev/null || true
-            sleep 2
+            APP_INGRESS=$(aws ec2 describe-security-groups --group-ids "$APP_SG" --query 'SecurityGroups[0].IpPermissions' --output json 2>/dev/null)
+            APP_EGRESS=$(aws ec2 describe-security-groups --group-ids "$APP_SG" --query 'SecurityGroups[0].IpPermissionsEgress' --output json 2>/dev/null)
+            [ "$APP_INGRESS" != "[]" ] && aws ec2 revoke-security-group-ingress --group-id "$APP_SG" --ip-permissions "$APP_INGRESS" 2>/dev/null || true
+            [ "$APP_EGRESS" != "[]" ] && aws ec2 revoke-security-group-egress --group-id "$APP_SG" --ip-permissions "$APP_EGRESS" 2>/dev/null || true
+            sleep 5
             aws ec2 delete-security-group --group-id "$APP_SG" 2>/dev/null && echo "✓ Deleted App SG" || echo "Could not delete App SG"
           fi
 

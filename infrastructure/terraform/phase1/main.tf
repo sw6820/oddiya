@@ -241,17 +241,8 @@ resource "aws_instance" "app_server" {
   }
 }
 
-# Elastic IP for App Server
-resource "aws_eip" "app_server" {
-  domain   = "vpc"
-  instance = aws_instance.app_server.id
-
-  tags = {
-    Name = "oddiya-app-server-eip-${var.environment}"
-  }
-
-  depends_on = [data.aws_internet_gateway.main]
-}
+# Elastic IP removed to avoid limit issues (5/5 EIPs in use)
+# EC2 instance uses auto-assigned public IP instead (associate_public_ip_address = true)
 
 # EC2 Instance: Database Server
 resource "aws_instance" "db_server" {
@@ -279,7 +270,7 @@ resource "aws_instance" "db_server" {
 # Outputs
 output "app_server_public_ip" {
   description = "Public IP of application server"
-  value       = aws_eip.app_server.public_ip
+  value       = aws_instance.app_server.public_ip
 }
 
 output "app_server_private_ip" {
