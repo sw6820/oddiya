@@ -307,6 +307,15 @@ jobs:
             ec2-user@$APP_IP << 'ENDSSH'
           cd /opt/oddiya/llm-agent
           tar xzf /tmp/llm-agent.tar.gz
+
+          # Create .env file with environment variables
+          cat > .env <<'EOF'
+          GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL=gemini-2.0-flash-exp
+          LLM_PROVIDER=gemini
+          MOCK_MODE=false
+          EOF
+
           source venv/bin/activate
           pip install -r requirements.txt
           sudo systemctl restart llm-agent
