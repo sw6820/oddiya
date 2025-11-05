@@ -16,8 +16,8 @@ google-generativeai>=0.3.0
 # HTTP client
 httpx>=0.25.0
 
-# Redis
-redis>=5.0.0
+# Redis - Not used in phase1 deployment
+# redis>=5.0.0
 
 # LangChain - 의존성 충돌 완전 해결
 # 모든 패키지를 최신 호환 버전으로
