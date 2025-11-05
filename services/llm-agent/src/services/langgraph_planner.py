@@ -8,7 +8,8 @@ from typing import TypedDict, List, Dict, Any, Annotated
 from datetime import datetime
 import operator
 
-from langchain_aws import ChatBedrock
+# Phase 1: Using Gemini only, Bedrock commented out
+# from langchain_aws import ChatBedrock
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.graph import StateGraph, END
@@ -80,13 +81,8 @@ class LangGraphPlanner:
                     )
                     logger.info(f"Initialized Gemini: {os.getenv('GEMINI_MODEL', 'gemini-pro')}")
             else:
-                # Use AWS Bedrock (legacy)
-                self.llm = ChatBedrock(
-                    model_id=os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20241022-v2:0"),
-                    region_name=os.getenv("AWS_REGION", "ap-northeast-2"),
-                    model_kwargs={"temperature": 0.7, "max_tokens": 2048}
-                )
-                logger.info(f"Initialized Bedrock: {os.getenv('BEDROCK_MODEL_ID')}")
+                # Phase 1: Bedrock not installed, use Gemini only
+                raise ValueError("Bedrock not available in Phase 1. Set LLM_PROVIDER=gemini and GOOGLE_API_KEY")
         else:
             self.llm = None  # Use mock responses
             logger.info("Mock mode enabled")

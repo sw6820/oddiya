@@ -243,10 +243,10 @@ jobs:
           sudo systemctl enable plan-service
           ENDSSH
 
-          # Copy JAR
+          # Copy JAR (exclude -plain.jar, use the fat JAR with dependencies)
           scp -i /tmp/oddiya-prod.pem \
             -o StrictHostKeyChecking=no \
-            services/plan-service/build/libs/plan-service-*.jar \
+            services/plan-service/build/libs/plan-service-0.1.0.jar \
             ec2-user@$APP_IP:/opt/oddiya/plan-service/app.jar
 
           # Start service
