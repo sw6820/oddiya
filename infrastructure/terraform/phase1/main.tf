@@ -55,10 +55,10 @@ data "aws_subnet" "public" {
   availability_zone = "${var.aws_region}a"
 }
 
-# Private Subnet - Use existing default VPC subnet in AZ-b
+# Private Subnet - Use existing default VPC subnet in AZ-c (t2.micro supported)
 data "aws_subnet" "private" {
   vpc_id            = data.aws_vpc.main.id
-  availability_zone = "${var.aws_region}b"
+  availability_zone = "${var.aws_region}c"
 }
 
 # NAT Gateway removed for cost optimization ($32/month savings)
