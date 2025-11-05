@@ -301,6 +301,20 @@ jobs:
             services/llm-agent/llm-agent.tar.gz \
             ec2-user@$APP_IP:/tmp/
 
+          # Create .env file locally with secrets
+          cat > /tmp/llm-agent.env << EOF
+          GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL=gemini-2.0-flash-exp
+          LLM_PROVIDER=gemini
+          MOCK_MODE=false
+          EOF
+
+          # Copy .env file to server
+          scp -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            /tmp/llm-agent.env \
+            ec2-user@$APP_IP:/tmp/.env
+
           # Extract and install
           ssh -i /tmp/oddiya-prod.pem \
             -o StrictHostKeyChecking=no \
@@ -308,13 +322,9 @@ jobs:
           cd /opt/oddiya/llm-agent
           tar xzf /tmp/llm-agent.tar.gz
 
-          # Create .env file with environment variables
-          cat > .env <<'EOF'
-          GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL=gemini-2.0-flash-exp
-          LLM_PROVIDER=gemini
-          MOCK_MODE=false
-          EOF
+          # Move .env file to correct location
+          mv /tmp/.env .env
+          chmod 600 .env
 
           source venv/bin/activate
           pip install -r requirements.txt
