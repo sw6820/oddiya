@@ -200,13 +200,43 @@ jobs:
         run: |
           APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
 
+          # Setup directory and service
+          ssh -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            ec2-user@$APP_IP << 'ENDSSH'
+          # Create directories
+          sudo mkdir -p /opt/oddiya/plan-service
+          sudo chown ec2-user:ec2-user /opt/oddiya/plan-service
+
+          # Create systemd service
+          sudo tee /etc/systemd/system/plan-service.service > /dev/null <<'EOF'
+          [Unit]
+          Description=Plan Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=ec2-user
+          WorkingDirectory=/opt/oddiya/plan-service
+          ExecStart=/usr/bin/java -jar /opt/oddiya/plan-service/app.jar
+          Restart=always
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable plan-service
+          ENDSSH
+
           # Copy JAR
           scp -i /tmp/oddiya-prod.pem \
             -o StrictHostKeyChecking=no \
             services/plan-service/build/libs/plan-service-*.jar \
-            ec2-user@$APP_IP:/opt/oddiya/plan-service/app.jar || true
+            ec2-user@$APP_IP:/opt/oddiya/plan-service/app.jar
 
-          # Restart service
+          # Start service
           ssh -i /tmp/oddiya-prod.pem \
             -o StrictHostKeyChecking=no \
             ec2-user@$APP_IP \
@@ -216,13 +246,49 @@ jobs:
         run: |
           APP_IP="${{ steps.ec2-ips.outputs.app_ip }}"
 
+          # Setup directory, venv, and service
+          ssh -i /tmp/oddiya-prod.pem \
+            -o StrictHostKeyChecking=no \
+            ec2-user@$APP_IP << 'ENDSSH'
+          # Create directories
+          sudo mkdir -p /opt/oddiya/llm-agent
+          sudo chown ec2-user:ec2-user /opt/oddiya/llm-agent
+
+          # Create venv if it doesn't exist
+          if [ ! -d "/opt/oddiya/llm-agent/venv" ]; then
+            python3 -m venv /opt/oddiya/llm-agent/venv
+          fi
+
+          # Create systemd service
+          sudo tee /etc/systemd/system/llm-agent.service > /dev/null <<'EOF'
+          [Unit]
+          Description=LLM Agent Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=ec2-user
+          WorkingDirectory=/opt/oddiya/llm-agent
+          Environment="PATH=/opt/oddiya/llm-agent/venv/bin"
+          ExecStart=/opt/oddiya/llm-agent/venv/bin/python main.py
+          Restart=always
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable llm-agent
+          ENDSSH
+
           # Copy package
           scp -i /tmp/oddiya-prod.pem \
             -o StrictHostKeyChecking=no \
             services/llm-agent/llm-agent.tar.gz \
-            ec2-user@$APP_IP:/tmp/ || true
+            ec2-user@$APP_IP:/tmp/
 
-          # Extract and restart
+          # Extract and install
           ssh -i /tmp/oddiya-prod.pem \
             -o StrictHostKeyChecking=no \
             ec2-user@$APP_IP << 'ENDSSH'
