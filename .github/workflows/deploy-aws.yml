@@ -83,6 +83,19 @@ jobs:
         run: |
           echo "=== Cleaning up leftover resources from previous runs ==="
 
+          # Terminate any leftover EC2 instances with production2024 environment tag
+          echo "Checking for leftover EC2 instances..."
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=production2024" "Name=instance-state-name,Values=running,stopped,stopping" \
+            --query 'Reservations[*].Instances[*].InstanceId' --output text 2>/dev/null || echo "")
+
+          if [ -n "$INSTANCE_IDS" ]; then
+            echo "Terminating instances: $INSTANCE_IDS"
+            aws ec2 terminate-instances --instance-ids $INSTANCE_IDS 2>/dev/null || true
+            echo "Waiting 20s for instances to terminate..."
+            sleep 20
+          fi
+
           # Get security group IDs
           APP_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=oddiya-app-server-production2024" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
           DB_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=oddiya-db-server-production2024" --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null || echo "")
