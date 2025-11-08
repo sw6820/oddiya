@@ -1,0 +1,33 @@
+
+# Environment variables
+# .env contains non-sensitive defaults and IS committed
+# .env.local and .env.* contain sensitive overrides and are NOT committed
+.env.local
+.env.*.local
+.env.production
+.env.staging
+!.env
+!.env.example
+
+# Release keystore (NEVER commit this!)
+android/**/*.keystore
+android/**/*.jks
+android/key.properties
+android/gradle.properties
+
+# APK/AAB files
+android/app/build/outputs/
+
+# Node modules
+node_modules/
+
+# Metro bundler cache
+.metro-health-check*
+
+# Build artifacts
+android/app/build/
+android/.gradle/
+
+# iOS build artifacts
+ios/build/
+ios/Pods/

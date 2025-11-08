@@ -1,46 +1,41 @@
 import { Platform } from 'react-native';
+import { AWS_EC2_IP, BACKEND_ENV } from '@env';
 
-export const API_CONFIG = {
-  // Base URLs by environment
-  LOCAL_SIMULATOR: 'http://localhost:8080',
-  LOCAL_ANDROID_EMULATOR: 'http://10.0.2.2:8080',
-  LOCAL_DEVICE: 'http://172.16.102.149:8080',
-  STAGING: 'https://staging.oddiya.com',
-  PRODUCTION: 'https://api.oddiya.com',
-};
+// Base URLs for different services
+// IMPORTANT: All configuration is managed via .env file
+// Port assignments:
+// - Port 8081: Metro Bundler (React Native packager) - RESERVED FOR LOCAL DEV
+// - Port 8082: Auth Service (OAuth, JWT tokens) - LOCAL ONLY
+// - Port 8083: Plan Service (CRUD operations)
+// - Port 8000: LLM Agent (AI plan generation)
 
-// Determine which base URL to use
-export const getBaseURL = () => {
-  if (__DEV__) {
-    // Development mode
-    if (Platform.OS === 'ios') {
-      // iOS Simulator
-      return API_CONFIG.LOCAL_SIMULATOR;
-    } else {
-      // Android Emulator
-      return API_CONFIG.LOCAL_ANDROID_EMULATOR;
-    }
-  }
-  // Production
-  return API_CONFIG.PRODUCTION;
-};
+// Environment configuration from .env
+const USE_LOCAL = BACKEND_ENV === 'local';
+const EC2_IP = AWS_EC2_IP;  // Read from .env (Elastic IP - permanent)
+const LOCAL_URL = 'http://localhost';
 
-export const BASE_URL = getBaseURL();
+// Port configuration:
+// Local: Auth=8082 (Metro uses 8081), Plan=8083, LLM=8000
+// AWS: Auth=8081 (no Metro in production), Plan=8083, LLM=8000
+export const BASE_URL = USE_LOCAL ? `${LOCAL_URL}:8082` : `http://${EC2_IP}:8081`;  // Auth Service
+export const PLAN_SERVICE_URL = USE_LOCAL ? `${LOCAL_URL}:8083` : `http://${EC2_IP}:8083`;  // Plan Service
+export const LLM_AGENT_URL = 'http://localhost:8000';  // LLM Agent for plan generation
 
 export const API_ENDPOINTS = {
   // Auth
   LOGIN: '/api/auth/login',
   SIGNUP: '/api/auth/signup',
-  GOOGLE_LOGIN: '/api/auth/google',
+  GOOGLE_LOGIN: '/api/v1/auth/google/verify',  // Mobile Google Sign-In endpoint
+  APPLE_LOGIN: '/api/v1/auth/apple/verify',  // Mobile Apple Sign-In endpoint
   OAUTH_CALLBACK: '/api/auth/oauth2/callback',
   REFRESH_TOKEN: '/api/auth/refresh',
 
   // User
   USER_PROFILE: '/api/users/me',
 
-  // Plans
-  PLANS: '/api/plans',
-  PLAN_BY_ID: (id: number) => `/api/plans/${id}`,
+  // Plans (on Plan Service, port 8083)
+  PLANS: `${PLAN_SERVICE_URL}/api/v1/plans`,
+  PLAN_BY_ID: (id: number) => `${PLAN_SERVICE_URL}/api/v1/plans/${id}`,
 
   // Videos
   VIDEOS: '/api/videos',
