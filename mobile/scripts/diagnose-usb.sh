@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# USB 연결 문제 진단 스크립트
+
+echo "========================================="
+echo "iOS 디바이스 USB 연결 진단"
+echo "========================================="
+echo ""
+
+echo "1. USB 디바이스 목록:"
+echo "-------------------------------------------"
+system_profiler SPUSBDataType | grep -i "iphone\|ipad" -A 5 || echo "❌ iOS 디바이스 감지 안 됨"
+
+echo ""
+echo "2. Xcode 설치 확인:"
+echo "-------------------------------------------"
+xcode-select -p && echo "✅ Xcode 설치됨" || echo "❌ Xcode 미설치"
+
+echo ""
+echo "3. Xcode 디바이스 목록:"
+echo "-------------------------------------------"
+xcrun xctrace list devices 2>/dev/null | grep -i "iphone\|ipad" || echo "❌ Xcode에 디바이스 없음"
+
+echo ""
+echo "4. macOS 버전:"
+echo "-------------------------------------------"
+sw_vers
+
+echo ""
+echo "5. USB 데몬 상태:"
+echo "-------------------------------------------"
+ps aux | grep -i usbd | grep -v grep || echo "⚠️ USB 데몬 실행 중 아님"
+
+echo ""
+echo "========================================="
+echo "진단 완료"
+echo "========================================="
+echo ""
+echo "결과 해석:"
+echo "-------------------------------------------"
+echo "iOS 디바이스 감지 안 됨:"
+echo "  → USB 케이블/포트 문제"
+echo "  → 디바이스 재시작 필요"
+echo "  → '이 컴퓨터 신뢰' 안 탭함"
+echo ""
+echo "Xcode에 디바이스 없음:"
+echo "  → Xcode 재시작"
+echo "  → USB 다시 연결"
+echo "  → 'Window → Devices and Simulators' 확인"
+echo ""
+echo "해결 방법:"
+echo "  1. 디바이스 잠금 해제"
+echo "  2. '이 컴퓨터 신뢰' 탭"
+echo "  3. USB 케이블 다시 연결"
+echo "  4. 다른 USB 포트 시도"
+echo "  5. 디바이스 재시작"
+echo "  6. Mac 재시작"
+echo "  7. USB 데몬 재시작:"
+echo "     sudo killall -STOP -c usbd && sleep 3 && sudo killall -CONT usbd"
+echo ""

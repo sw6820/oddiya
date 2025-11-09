@@ -12,7 +12,9 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/types';
 import { useAppDispatch } from '@/store/hooks';
-import { loginWithGoogle } from '@/store/slices/authSlice';
+import { loginWithGoogle, loginWithApple } from '@/store/slices/authSlice';
+import { Platform } from 'react-native';
+import { appleSignInService } from '@/services/appleSignInService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Welcome'>;
 
@@ -20,48 +22,83 @@ const { width } = Dimensions.get('window');
 
 export default function WelcomeScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(false);
+
+  // Check if Apple Sign-In is available (iOS 13+)
+  React.useEffect(() => {
+    const checkAppleAvailability = async () => {
+      const available = await appleSignInService.isAvailable();
+      setIsAppleAvailable(available);
+      console.log('[WelcomeScreen] Apple Sign-In available:', available);
+    };
+    checkAppleAvailability();
+  }, []);
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
+    setIsGoogleLoading(true);
     try {
+      console.log('[WelcomeScreen] Starting Google Sign-In...');
       await dispatch(loginWithGoogle()).unwrap();
+      console.log('[WelcomeScreen] ✅ Google Sign-In successful');
       // Navigation is handled by App.tsx based on auth state
     } catch (error: any) {
+      console.error('[WelcomeScreen] ❌ Google Sign-In failed:', error);
       Alert.alert(
-        'Sign In Failed',
-        error.message || 'Failed to sign in with Google. Please try again.',
-        [{ text: 'OK' }]
+        '로그인 실패',
+        error.message || 'Google 로그인에 실패했습니다. 다시 시도해주세요.',
+        [{ text: '확인' }]
       );
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
+
+  const handleAppleSignIn = async () => {
+    setIsAppleLoading(true);
+    try {
+      console.log('[WelcomeScreen] Starting Apple Sign-In...');
+      await dispatch(loginWithApple()).unwrap();
+      console.log('[WelcomeScreen] ✅ Apple Sign-In successful');
+      // Navigation is handled by App.tsx based on auth state
+    } catch (error: any) {
+      console.error('[WelcomeScreen] ❌ Apple Sign-In failed:', error);
+      Alert.alert(
+        '로그인 실패',
+        error.message || 'Apple 로그인에 실패했습니다. 다시 시도해주세요.',
+        [{ text: '확인' }]
+      );
+    } finally {
+      setIsAppleLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Logo */}
       <View style={styles.logoContainer}>
         <Text style={styles.logo}>🗺️</Text>
-        <Text style={styles.appName}>Oddiya</Text>
-        <Text style={styles.tagline}>AI-Powered Travel Planner</Text>
+        <Text style={styles.appName}>오디야</Text>
+        <Text style={styles.tagline}>AI 기반 여행 플래너</Text>
       </View>
 
       {/* Features */}
       <View style={styles.featuresContainer}>
         <FeatureItem
           emoji="🤖"
-          title="AI Travel Planning"
-          description="Get personalized itineraries powered by AI"
+          title="AI 여행 계획"
+          description="AI가 제공하는 맞춤형 여행 일정"
         />
         <FeatureItem
           emoji="🎥"
-          title="Video Memories"
-          description="Create beautiful travel videos automatically"
+          title="비디오 추억"
+          description="자동으로 아름다운 여행 영상 제작"
         />
         <FeatureItem
           emoji="🌍"
-          title="Discover Korea"
-          description="Explore hidden gems and local experiences"
+          title="한국 탐험"
+          description="숨은 명소와 로컬 경험 탐색"
         />
       </View>
 
@@ -72,39 +109,42 @@ export default function WelcomeScreen({ navigation }: Props) {
           style={styles.googleButton}
           onPress={handleGoogleSignIn}
           activeOpacity={0.8}
-          disabled={isLoading}>
-          {isLoading ? (
+          disabled={isGoogleLoading || isAppleLoading}>
+          {isGoogleLoading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <>
               <Text style={styles.googleIcon}>🔵</Text>
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
+              <Text style={styles.googleButtonText}>Google로 계속하기</Text>
             </>
           )}
         </TouchableOpacity>
 
-        {/* Divider */}
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* Email Sign-In Button */}
-        <TouchableOpacity
-          style={styles.emailButton}
-          onPress={() => navigation.navigate('Login')}
-          activeOpacity={0.8}
-          disabled={isLoading}>
-          <Text style={styles.emailButtonText}>Sign in with Email</Text>
-        </TouchableOpacity>
+        {/* Apple Sign-In Button */}
+        {isAppleAvailable && (
+          <TouchableOpacity
+            style={styles.appleButton}
+            onPress={handleAppleSignIn}
+            activeOpacity={0.8}
+            disabled={isGoogleLoading || isAppleLoading}>
+            {isAppleLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <>
+                <Text style={styles.appleIcon}></Text>
+                <Text style={styles.appleButtonText}>Apple로 계속하기</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         {/* Terms */}
         <Text style={styles.termsText}>
-          By continuing, you agree to our{' '}
-          <Text style={styles.termsLink}>Terms of Service</Text>
-          {' '}and{' '}
-          <Text style={styles.termsLink}>Privacy Policy</Text>
+          계속하면{' '}
+          <Text style={styles.termsLink}>서비스 약관</Text>
+          {' '}및{' '}
+          <Text style={styles.termsLink}>개인정보 보호정책</Text>
+          에 동의하게 됩니다
         </Text>
       </View>
     </View>
@@ -209,33 +249,44 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E0E0E0',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#999999',
-    fontSize: 14,
-  },
-  emailButton: {
-    backgroundColor: '#FFFFFF',
+  appleButton: {
+    backgroundColor: '#000000', // Apple Black
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#007AFF',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  emailButtonText: {
-    color: '#007AFF',
+  appleIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  appleButtonText: {
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  testButton: {
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  testButtonText: {
+    color: '#666666',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   termsText: {
     fontSize: 12,

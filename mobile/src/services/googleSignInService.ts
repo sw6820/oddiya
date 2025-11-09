@@ -27,20 +27,26 @@ class GoogleSignInService {
    * Must be called before any other methods
    *
    * @param webClientId - OAuth 2.0 Web Client ID from Google Cloud Console
+   * @param iosClientId - (Optional) OAuth 2.0 iOS Client ID from Google Cloud Console
    */
-  configure(webClientId: string): void {
+  configure(webClientId: string, iosClientId?: string): void {
     if (this.configured) {
       return;
     }
 
-    GoogleSignin.configure({
-      webClientId, // From Google Cloud Console (Web application type)
-      offlineAccess: false, // We don't need offline access
-      hostedDomain: '', // Optional: restrict to specific domain
-      forceCodeForRefreshToken: false,
-    });
-
-    this.configured = true;
+    try {
+      GoogleSignin.configure({
+        webClientId,
+        iosClientId, // iOS requires this to be set explicitly
+        offlineAccess: true,
+        forceCodeForRefreshToken: true,
+      });
+      this.configured = true;
+      console.log('✅ Google Sign-In configured successfully');
+    } catch (error) {
+      console.error('❌ Failed to configure Google Sign-In:', error);
+      throw error;
+    }
   }
 
   /**
@@ -52,41 +58,32 @@ class GoogleSignInService {
    */
   async signIn(): Promise<GoogleUser> {
     try {
-      // Check if configured
-      if (!this.configured) {
-        throw new Error(
-          'GoogleSignInService not configured. Call configure() first.'
-        );
-      }
-
-      // Check if Google Play Services are available (Android)
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-
-      // Sign in
+      await GoogleSignin.hasPlayServices();
       const userInfo: User = await GoogleSignin.signIn();
 
-      // Get ID token
-      const tokens = await GoogleSignin.getTokens();
+      if (!userInfo.data?.user) {
+        throw new Error('Failed to get user information from Google');
+      }
+
+      const {user, idToken} = userInfo.data;
 
       return {
-        id: userInfo.user.id,
-        email: userInfo.user.email,
-        name: userInfo.user.name || '',
-        photo: userInfo.user.photo || undefined,
-        idToken: tokens.idToken,
+        id: user.id,
+        email: user.email,
+        name: user.name || '',
+        photo: user.photo || undefined,
+        idToken: idToken || '',
       };
     } catch (error: any) {
-      // Handle specific error cases
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        throw new Error('Google Sign-In cancelled by user');
+        throw new Error('Sign in was cancelled');
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        throw new Error('Google Sign-In already in progress');
+        throw new Error('Sign in is already in progress');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        throw new Error('Google Play Services not available or outdated');
+        throw new Error('Google Play Services not available. Please update Google Play Services and try again.');
       } else {
-        throw new Error(`Google Sign-In failed: ${error.message}`);
+        console.error('Google Sign-In error:', error);
+        throw new Error('Failed to sign in with Google. Please try again later.');
       }
     }
   }
@@ -98,9 +95,10 @@ class GoogleSignInService {
   async signOut(): Promise<void> {
     try {
       await GoogleSignin.signOut();
+      console.log('✅ Google sign-out successful');
     } catch (error) {
-      console.error('Google sign-out error:', error);
-      // Don't throw - sign out should always succeed locally
+      console.error('❌ Google sign-out error:', error);
+      throw error;
     }
   }
 
@@ -111,8 +109,10 @@ class GoogleSignInService {
   async revokeAccess(): Promise<void> {
     try {
       await GoogleSignin.revokeAccess();
+      console.log('✅ Google access revoked');
     } catch (error) {
-      console.error('Google revoke access error:', error);
+      console.error('❌ Google revoke access error:', error);
+      throw error;
     }
   }
 
@@ -122,7 +122,12 @@ class GoogleSignInService {
    * @returns true if signed in, false otherwise
    */
   async isSignedIn(): Promise<boolean> {
-    return await GoogleSignin.isSignedIn();
+    try {
+      return await GoogleSignin.isSignedIn();
+    } catch (error) {
+      console.error('❌ Failed to check Google sign-in status:', error);
+      return false;
+    }
   }
 
   /**
@@ -132,17 +137,22 @@ class GoogleSignInService {
    */
   async getCurrentUser(): Promise<GoogleUser | null> {
     try {
-      const userInfo = await GoogleSignin.signInSilently();
-      const tokens = await GoogleSignin.getTokens();
+      const userInfo = await GoogleSignin.getCurrentUser();
+      if (!userInfo?.data?.user) {
+        return null;
+      }
+
+      const {user, idToken} = userInfo.data;
 
       return {
-        id: userInfo.user.id,
-        email: userInfo.user.email,
-        name: userInfo.user.name || '',
-        photo: userInfo.user.photo || undefined,
-        idToken: tokens.idToken,
+        id: user.id,
+        email: user.email,
+        name: user.name || '',
+        photo: user.photo || undefined,
+        idToken: idToken || '',
       };
     } catch (error) {
+      console.error('❌ Failed to get current Google user:', error);
       return null;
     }
   }
